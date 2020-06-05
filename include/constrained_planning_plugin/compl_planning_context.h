@@ -3,6 +3,9 @@
 
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/planning_interface/planning_interface.h>
+#include <moveit/planning_scene/planning_scene.h>
+
+#include "constrained_planning_plugin/compl_interface.h"
 
 namespace compl_interface
 {
@@ -17,6 +20,7 @@ public:
   {
     robot_state_.reset(new moveit::core::RobotState(robot_model));
     robot_state_->setToDefaultValues();
+    compl_interface_ = COMPLInterfacePtr(new COMPLInterface());
   }
 
   ~COMPLPlanningContext() = default;
@@ -39,6 +43,10 @@ private:
   // it would be nice to have a kinematics solver instance for the constraints
   // but I don't know how to initialize this member properly
   // const kinematics::KinematicsBaseConstPtr kinematics_solver_;
+
+  // the actual planner goes here
+  COMPLInterfacePtr compl_interface_;
+
 };
 }  // namespace compl_interface
 
