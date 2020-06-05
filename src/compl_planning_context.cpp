@@ -10,6 +10,13 @@ void COMPLPlanningContext::clear()
 
 bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 {
+  // ROS_INFO_STREAM("Solving a motion planning request.");
+
+  // std::vector<double> tmp_joint_positions {0, 0, 0, 0, 0, 0, 0};
+  // robot_state_->setJointGroupPositions(joint_model_group_,tmp_joint_positions);
+  // auto fk = robot_state_->getGlobalLinkTransform("panda_hand");
+  // ROS_INFO_STREAM("Forward kinematics: " << fk.translation());
+
   return false;
 }
 

@@ -12,9 +12,11 @@ MOVEIT_CLASS_FORWARD(COMPLPlanningContext);
 class COMPLPlanningContext : public planning_interface::PlanningContext
 {
 public:
-  COMPLPlanningContext(const std::string& name, const std::string& group, const moveit::core::RobotModelConstPtr& model)
-    : PlanningContext(name, group), robot_model_(model)
+  COMPLPlanningContext(const std::string& name, const std::string& group, moveit::core::RobotModelConstPtr robot_model)
+    : PlanningContext(name, group), robot_model_(robot_model), joint_model_group_(robot_model->getJointModelGroup(group))
   {
+    robot_state_.reset(new moveit::core::RobotState(robot_model));
+    robot_state_->setToDefaultValues();
   }
 
   ~COMPLPlanningContext() = default;
@@ -29,6 +31,14 @@ public:
 
 private:
   moveit::core::RobotModelConstPtr robot_model_;
+  const moveit::core::JointModelGroup* joint_model_group_;  // Why is this a raw pointer everywhere in MoveIt?
+
+  // save a single state to do forward kinematics (not ideal)
+  moveit::core::RobotStatePtr robot_state_;
+
+  // it would be nice to have a kinematics solver instance for the constraints
+  // but I don't know how to initialize this member properly
+  // const kinematics::KinematicsBaseConstPtr kinematics_solver_;
 };
 }  // namespace compl_interface
 
