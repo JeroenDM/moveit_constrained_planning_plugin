@@ -1,0 +1,7 @@
+ <library path="libmoveit_constrained_planning_plugin">
+  <class name="compl_interface/COMPLPlanner" type="compl_interface::COMPLPlannermanager" base_class_type="planning_interface::PlannerManager">
+    <description>
+      Constrained motion planning using OMPL.
+    </description>
+  </class>
+</library>
