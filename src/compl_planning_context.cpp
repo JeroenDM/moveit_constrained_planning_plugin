@@ -17,7 +17,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // auto fk = robot_state_->getGlobalLinkTransform("panda_hand");
   // ROS_INFO_STREAM("Forward kinematics: " << fk.translation());
 
-  compl_interface_->preSolve();
+  compl_interface_->preSolve(robot_model_, "panda_arm");
 
   auto success = compl_interface_->solve();
 

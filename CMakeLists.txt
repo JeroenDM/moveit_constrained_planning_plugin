@@ -31,6 +31,7 @@ add_library(
   ${PROJECT_NAME}
   src/compl_planning_context.cpp
   src/compl_interface.cpp
+  src/constraint.cpp
 )
 
 target_link_libraries(

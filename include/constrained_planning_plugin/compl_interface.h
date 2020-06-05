@@ -13,6 +13,8 @@
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
+#include <constrained_planning_plugin/constraint.h>
+
 namespace compl_interface
 {
 namespace ob = ompl::base;
@@ -24,20 +26,6 @@ namespace og = ompl::geometric;
  * */
 bool isValid(const ob::State* state);
 
-/** Constraints could be created
- * through a factory that returns the correct stuff
- * based on the info in the planning request.
- * */
-class ZUpConstraints : public ob::Constraint
-{
-public:
-  ZUpConstraints() : ob::Constraint(7, 1)
-  {
-  }
-
-  void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
-};
-
 MOVEIT_CLASS_FORWARD(COMPLInterface);
 
 class COMPLInterface
@@ -45,7 +33,7 @@ class COMPLInterface
 public:
   COMPLInterface();
 
-  void preSolve();
+  void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group);
 
   bool solve();
 
@@ -53,7 +41,7 @@ public:
 
 private:
   std::shared_ptr<ob::RealVectorStateSpace> state_space_;
-  std::shared_ptr<ZUpConstraints> constraints_;
+  std::shared_ptr<COMPLConstraint> constraints_;
 
   std::shared_ptr<ob::ProjectedStateSpace> constrained_state_space_;
   std::shared_ptr<ob::ConstrainedSpaceInformation> constrained_state_space_info_;

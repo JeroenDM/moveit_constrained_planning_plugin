@@ -9,16 +9,11 @@ bool isValid(const ob::State* state)
   return true;
 }
 
-void ZUpConstraints::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
-{
-  out[0] = 0.0;
-}
-
 COMPLInterface::COMPLInterface()
 {
 }
 
-void COMPLInterface::preSolve()
+void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group)
 {
   state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
   ob::RealVectorBounds bounds(7);
@@ -26,7 +21,7 @@ void COMPLInterface::preSolve()
   bounds.setHigh(2);
   state_space_->setBounds(bounds);
 
-  constraints_ = std::make_shared<ZUpConstraints>();
+  constraints_ = std::make_shared<COMPLConstraint>(robot_model, group);
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);
   constrained_state_space_info_ = std::make_shared<ob::ConstrainedSpaceInformation>(constrained_state_space_);
@@ -41,13 +36,15 @@ bool COMPLInterface::solve()
 {
   // problem specific admin
   Eigen::VectorXd sv(7), gv(7);
-  sv << 0, 0, 1, 0, 0, 0, 1;
-  gv << 0, 0, -1, 0, 0, 0, 1;
+  sv << 0, 0, 0, 0, 0, 0, 0;
+  gv << -1, 0, 0, 0, 0, 0, 0;
   ob::ScopedState<> start(constrained_state_space_);
   ob::ScopedState<> goal(constrained_state_space_);
   start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
   goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
   simple_setup_->setStartAndGoalStates(start, goal);
+
+
 
   // solving it
   simple_setup_->setup();
