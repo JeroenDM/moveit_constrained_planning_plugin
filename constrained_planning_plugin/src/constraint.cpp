@@ -26,7 +26,19 @@ void COMPLConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen
   auto rpy = fk.rotation().eulerAngles(0, 1, 2);
 
   // y rotation zero
-  // out[0] = rpy[1];
-  out[0] = 0.0;
+  // out[0] = rpy[0];
+  out[0] = fk.translation()[0] - 0.3;
+  // out[0] = 0.0;
+}
+
+void COMPLConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x,
+                               Eigen::Ref<Eigen::MatrixXd> out) const
+{
+  robot_state_->setJointGroupPositions(joint_model_group_, x);
+
+  auto J = robot_state_->getJacobian(joint_model_group_);
+  // out = J.row(3);
+  out = J.row(0);
+  
 }
 }  // namespace compl_interface
