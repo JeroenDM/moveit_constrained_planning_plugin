@@ -1,0 +1,4 @@
+ 
+<launch>
+  <node name="compl_planner_example" pkg="planning_plugin_examples" type="compl_planner_example" respawn="false" output="screen"/>
+</launch>
