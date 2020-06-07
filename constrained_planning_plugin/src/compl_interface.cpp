@@ -21,6 +21,8 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
   bounds.setHigh(2);
   state_space_->setBounds(bounds);
 
+  // constraints should be passed from the planning constext based on what is in the planning request
+  // and then through some kind of constrained factory class we can create the appropriate ones.
   constraints_ = std::make_shared<COMPLConstraint>(robot_model, group);
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);

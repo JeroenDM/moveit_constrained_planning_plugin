@@ -6,6 +6,7 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit_msgs/MotionPlanRequest.h>
 #include <moveit_msgs/MoveItErrorCodes.h>
+#include <moveit/collision_detection_fcl/collision_detector_allocator_fcl.h>
 
 #include <constrained_planning_plugin/compl_planning_context.h>
 
@@ -65,7 +66,14 @@ public:
       return planning_interface::PlanningContextPtr();
     }
 
+    // (jeroendm) I don't understand yet why we need the two lines below
+    planning_scene::PlanningScenePtr ps = planning_scene->diff();
+    ps->setActiveCollisionDetector(collision_detection::CollisionDetectorAllocatorFCL::create(), true);
+
     const COMPLPlanningContextPtr& context = planning_contexts_.at(req.group_name);
+    context->setPlanningScene(ps);
+    context->setMotionPlanRequest(req);
+
     return context;
   }
 

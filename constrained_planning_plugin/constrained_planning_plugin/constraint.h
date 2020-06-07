@@ -10,6 +10,13 @@ namespace compl_interface
 {
 namespace ob = ompl::base;
 
+/** Temp dummy constraint class
+ *
+ * This class should be replaced with a factory that can create all types of different constraints
+ * dependening on what is in the planning request.
+ * 
+ * For the link name member, I would like it const, but I don't know how to properly initialize it then.
+ * */
 class COMPLConstraint : public ob::Constraint
 {
 public:
@@ -23,7 +30,7 @@ private:
   robot_model::RobotModelConstPtr robot_model_;
   robot_state::RobotStatePtr robot_state_;
   const robot_state::JointModelGroup* joint_model_group_;
-  const std::string link_name_;
+  std::string link_name_;
 };
 
 }  // namespace compl_interface
