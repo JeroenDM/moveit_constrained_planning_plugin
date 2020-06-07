@@ -26,6 +26,7 @@ void COMPLConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen
   auto rpy = fk.rotation().eulerAngles(0, 1, 2);
 
   // y rotation zero
-  out[0] = rpy[1];
+  // out[0] = rpy[1];
+  out[0] = 0.0;
 }
 }  // namespace compl_interface

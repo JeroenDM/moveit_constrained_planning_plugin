@@ -27,6 +27,8 @@ public:
 
   bool terminate() override;
 
+  robot_trajectory::RobotTrajectoryPtr createRobotTrajectoryFromSolution(std::vector<Eigen::VectorXd> path);
+
 private:
   moveit::core::RobotModelConstPtr robot_model_;
   const moveit::core::JointModelGroup* joint_model_group_;  // Why is this a raw pointer everywhere in MoveIt?

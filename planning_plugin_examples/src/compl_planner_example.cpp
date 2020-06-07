@@ -78,6 +78,10 @@ int main(int argc, char** argv)
   {
     ROS_INFO_STREAM("Planning context for joint goal created.");
     auto success = context->solve(res);
+    if (res.trajectory_)
+    {
+      ROS_INFO_STREAM("Path found: " << res.trajectory_->getFirstWayPoint() );
+    }
   }
   else
   {

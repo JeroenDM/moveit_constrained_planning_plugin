@@ -10,6 +10,12 @@
 #include <ompl/base/ConstrainedSpaceInformation.h>
 #include <ompl/base/spaces/constraint/ProjectedStateSpace.h>
 
+/** OMPL interface class
+ *
+ * Maybe change name, as this is more an implementation than an interface.
+ * I would like to introduce the symbol q for joint_positions. this would make
+ * a lot of code cleaner.
+ * */
 #include <ompl/geometric/SimpleSetup.h>
 #include <ompl/geometric/planners/rrt/RRTConnect.h>
 
@@ -35,9 +41,19 @@ public:
 
   void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group);
 
-  bool solve();
+  /** directly pass joint positions for start and goal in this minimal example
+   *
+   * Should this be part of the preSolve setup?
+   * */
+  bool solve(const Eigen::Ref<const Eigen::VectorXd>&, const Eigen::Ref<const Eigen::VectorXd>&);
 
   void postSolve();
+
+  /** TODO too much Eigen copy operations. */
+  std::vector<Eigen::VectorXd> getSolutionPath()
+  {
+    return solution_path_;
+  }
 
 private:
   std::shared_ptr<ob::RealVectorStateSpace> state_space_;
@@ -47,6 +63,8 @@ private:
   std::shared_ptr<ob::ConstrainedSpaceInformation> constrained_state_space_info_;
   std::shared_ptr<og::SimpleSetup> simple_setup_;
   std::shared_ptr<og::RRTConnect> planner_;
+
+  std::vector<Eigen::VectorXd> solution_path_;
 };
 }  // namespace compl_interface
 

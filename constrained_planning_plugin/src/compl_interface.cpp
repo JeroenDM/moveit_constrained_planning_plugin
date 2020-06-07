@@ -17,8 +17,8 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 {
   state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
   ob::RealVectorBounds bounds(7);
-  bounds.setLow(-2);
-  bounds.setHigh(2);
+  bounds.setLow(-M_PI);
+  bounds.setHigh(M_PI);
   state_space_->setBounds(bounds);
 
   // constraints should be passed from the planning constext based on what is in the planning request
@@ -34,19 +34,20 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
   simple_setup_->setStateValidityChecker(isValid);
 }
 
-bool COMPLInterface::solve()
+bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_positions,
+                           const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions)
 {
   // problem specific admin
-  Eigen::VectorXd sv(7), gv(7);
-  sv << 0, 0, 0, 0, 0, 0, 0;
-  gv << -1, 0, 0, 0, 0, 0, 0;
+  // Eigen::VectorXd sv(7), gv(7);
+  // sv << 0, 0, 0, 0, 0, 0, 0;
+  // gv << -1, 0, 0, 0, 0, 0, 0;
   ob::ScopedState<> start(constrained_state_space_);
   ob::ScopedState<> goal(constrained_state_space_);
-  start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
-  goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
+  // start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
+  // goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
+  start->as<ob::ConstrainedStateSpace::StateType>()->copy(start_joint_positions);
+  goal->as<ob::ConstrainedStateSpace::StateType>()->copy(goal_joint_positions);
   simple_setup_->setStartAndGoalStates(start, goal);
-
-
 
   // solving it
   simple_setup_->setup();
@@ -66,8 +67,17 @@ void COMPLInterface::postSolve()
 {
   simple_setup_->simplifySolution(5.);
   auto path = simple_setup_->getSolutionPath();
-  // path.interpolate();
+  path.interpolate();
 
   path.printAsMatrix(std::cout);
+
+  // write path to generic format indepenent from OMPL to pass it to ROS?
+  solution_path_.clear();
+  for (auto& state : path.getStates())
+  {
+    const Eigen::Map<Eigen::VectorXd> &x = *state->as<ob::ConstrainedStateSpace::StateType>();
+    Eigen::VectorXd joint_position(x);
+    solution_path_.push_back(joint_position);
+  }
 }
 }  // namespace compl_interface
