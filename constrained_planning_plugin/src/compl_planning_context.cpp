@@ -4,6 +4,14 @@
 
 namespace compl_interface
 {
+COMPLPlanningContext::COMPLPlanningContext(const std::string& name, const std::string& group, moveit::core::RobotModelConstPtr robot_model)
+  : PlanningContext(name, group), robot_model_(robot_model), joint_model_group_(robot_model->getJointModelGroup(group))
+{
+  robot_state_.reset(new moveit::core::RobotState(robot_model));
+  robot_state_->setToDefaultValues();
+  compl_interface_ = COMPLInterfacePtr(new COMPLInterface());
+}
+
 void COMPLPlanningContext::clear()
 {
 }

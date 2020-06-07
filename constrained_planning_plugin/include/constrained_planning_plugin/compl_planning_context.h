@@ -15,13 +15,7 @@ MOVEIT_CLASS_FORWARD(COMPLPlanningContext);
 class COMPLPlanningContext : public planning_interface::PlanningContext
 {
 public:
-  COMPLPlanningContext(const std::string& name, const std::string& group, moveit::core::RobotModelConstPtr robot_model)
-    : PlanningContext(name, group), robot_model_(robot_model), joint_model_group_(robot_model->getJointModelGroup(group))
-  {
-    robot_state_.reset(new moveit::core::RobotState(robot_model));
-    robot_state_->setToDefaultValues();
-    compl_interface_ = COMPLInterfacePtr(new COMPLInterface());
-  }
+  COMPLPlanningContext(const std::string& name, const std::string& group, moveit::core::RobotModelConstPtr robot_model);
 
   ~COMPLPlanningContext() = default;
 
@@ -46,7 +40,6 @@ private:
 
   // the actual planner goes here
   COMPLInterfacePtr compl_interface_;
-
 };
 }  // namespace compl_interface
 
