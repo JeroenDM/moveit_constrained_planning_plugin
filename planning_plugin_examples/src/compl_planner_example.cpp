@@ -10,6 +10,7 @@
 #include <moveit/planning_scene/planning_scene.h>
 // #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/kinematic_constraints/utils.h>
+#include <moveit_visual_tools/moveit_visual_tools.h>
 
 int main(int argc, char** argv)
 {
@@ -73,7 +74,7 @@ int main(int argc, char** argv)
                                           -1.2160652080175647 };
   start_state.setJointGroupPositions(joint_model_group, start_joint_values);
   moveit::core::robotStateToRobotStateMsg(start_state, req.start_state);
- 
+
   // create goal
   robot_state::RobotState goal_state(robot_model);
   std::vector<double> goal_joint_values{ 1.7301680303369467, -0.7342165592762893, -0.5358506493073328,
@@ -92,11 +93,13 @@ int main(int argc, char** argv)
     auto success = context->solve(res);
     if (res.trajectory_)
     {
-      ROS_INFO_STREAM("Path found: " << res.trajectory_->getFirstWayPoint());
+      ROS_INFO_STREAM("Path found: " << res.trajectory_);
     }
   }
   else
   {
     ROS_INFO_STREAM("Failed to load planning context.");
   }
+
+  ros::shutdown();
 }

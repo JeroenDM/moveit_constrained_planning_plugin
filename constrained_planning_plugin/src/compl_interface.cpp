@@ -71,11 +71,14 @@ void COMPLInterface::postSolve()
 
   path.printAsMatrix(std::cout);
 
+  std::cout << "Writing path from OMPL to generic format." << std::endl;
+
   // write path to generic format indepenent from OMPL to pass it to ROS?
   solution_path_.clear();
   for (auto& state : path.getStates())
   {
     const Eigen::Map<Eigen::VectorXd>& x = *state->as<ob::ConstrainedStateSpace::StateType>();
+    
     Eigen::VectorXd joint_position(x);
     solution_path_.push_back(joint_position);
   }
