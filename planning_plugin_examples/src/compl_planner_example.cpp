@@ -6,6 +6,7 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
+#include <moveit/robot_state/conversions.h>
 #include <moveit/planning_scene/planning_scene.h>
 // #include <moveit/planning_scene_monitor/planning_scene_monitor.h>
 #include <moveit/kinematic_constraints/utils.h>
@@ -65,9 +66,20 @@ int main(int argc, char** argv)
 
   req.group_name = "panda_arm";
 
+  // create start
+  robot_state::RobotState start_state(robot_model);
+  std::vector<double> start_joint_values{ 0.666988104319289,   -0.9954030434136065, -1.1194235704518019,
+                                          -1.9946073045682555, -2.772101772642487,  3.4631937276027194,
+                                          -1.2160652080175647 };
+  start_state.setJointGroupPositions(joint_model_group, start_joint_values);
+  moveit::core::robotStateToRobotStateMsg(start_state, req.start_state);
+ 
+  // create goal
   robot_state::RobotState goal_state(robot_model);
-  std::vector<double> joint_values = { -1.0, 0.7, 0.7, -1.5, -0.7, 2.0, 0.0 };
-  goal_state.setJointGroupPositions(joint_model_group, joint_values);
+  std::vector<double> goal_joint_values{ 1.7301680303369467, -0.7342165592762893, -0.5358506493073328,
+                                         -2.214051132383283, -1.9148221683474542, 1.8324940020482856,
+                                         -1.588014538557859 };
+  goal_state.setJointGroupPositions(joint_model_group, goal_joint_values);
   moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
   req.goal_constraints.clear();
   req.goal_constraints.push_back(joint_goal);
@@ -80,7 +92,7 @@ int main(int argc, char** argv)
     auto success = context->solve(res);
     if (res.trajectory_)
     {
-      ROS_INFO_STREAM("Path found: " << res.trajectory_->getFirstWayPoint() );
+      ROS_INFO_STREAM("Path found: " << res.trajectory_->getFirstWayPoint());
     }
   }
   else

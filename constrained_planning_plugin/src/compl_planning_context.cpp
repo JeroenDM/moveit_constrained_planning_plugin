@@ -2,6 +2,8 @@
 
 #include <moveit/planning_interface/planning_interface.h>
 
+#include <moveit/robot_state/conversions.h>
+
 namespace compl_interface
 {
 COMPLPlanningContext::COMPLPlanningContext(const std::string& name, const std::string& group,
@@ -26,10 +28,23 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // auto fk = robot_state_->getGlobalLinkTransform("panda_hand");
   // ROS_INFO_STREAM("Forward kinematics: " << fk.translation());
 
-  // get current joint positions to plan from
-  auto start_state = planning_scene_->getCurrentState();
+  // TODO figure out how to do selection based on request content
+  bool use_current_state{ false };
   Eigen::VectorXd start_joint_positions(7);
-  start_state.copyJointGroupPositions(joint_model_group_, start_joint_positions);
+  if (use_current_state)
+  {
+    auto start_state = planning_scene_->getCurrentState();
+    start_state.copyJointGroupPositions(joint_model_group_, start_joint_positions);
+  }
+  else
+  {
+    // read start state from planning request
+    robot_state::RobotState start_state(robot_model_);
+    moveit::core::robotStateMsgToRobotState(request_.start_state, start_state);
+    start_state.copyJointGroupPositions(joint_model_group_, start_joint_positions);
+    // or cast joint positions from std vector to Eigen?
+  }
+
   ROS_INFO_STREAM("Start state: " << start_joint_positions);
 
   // extract goal from planning request

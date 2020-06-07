@@ -17,8 +17,8 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 {
   state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
   ob::RealVectorBounds bounds(7);
-  bounds.setLow(-M_PI);
-  bounds.setHigh(M_PI);
+  bounds.setLow(-2 * M_PI);
+  bounds.setHigh(2 * M_PI);
   state_space_->setBounds(bounds);
 
   // constraints should be passed from the planning constext based on what is in the planning request
@@ -75,7 +75,7 @@ void COMPLInterface::postSolve()
   solution_path_.clear();
   for (auto& state : path.getStates())
   {
-    const Eigen::Map<Eigen::VectorXd> &x = *state->as<ob::ConstrainedStateSpace::StateType>();
+    const Eigen::Map<Eigen::VectorXd>& x = *state->as<ob::ConstrainedStateSpace::StateType>();
     Eigen::VectorXd joint_position(x);
     solution_path_.push_back(joint_position);
   }
