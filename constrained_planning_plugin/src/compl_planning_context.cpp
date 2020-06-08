@@ -85,35 +85,25 @@ bool COMPLPlanningContext::terminate()
 robot_trajectory::RobotTrajectoryPtr
 COMPLPlanningContext::createRobotTrajectoryFromSolution(std::vector<Eigen::VectorXd> path)
 {
-
   if (path.size() == 0)
   {
     ROS_ERROR_STREAM("Cannot create robot trajectory from empty path.");
   }
 
-
   auto trajectory = std::make_shared<robot_trajectory::RobotTrajectory>(robot_model_, request_.group_name);
-  auto state = std::make_shared<moveit::core::RobotState>(planning_scene_->getCurrentState());
 
-  auto joint_names = joint_model_group_->getJointModelNames();
-  for (auto name : joint_names)
+  for (std::size_t path_index = 0; path_index < path.size(); ++path_index)
   {
-    ROS_INFO_STREAM(name);
+    size_t joint_index = 0;
+    auto state = std::make_shared<moveit::core::RobotState>(planning_scene_->getCurrentState());
+    for (const moveit::core::JointModel* jm : trajectory->getGroup()->getActiveJointModels())
+    {
+      assert(jm->getVariableCount() == 1);
+      std::cout << jm->getName() << std::endl;
+      state->setVariablePosition(jm->getFirstVariableIndex(), path[path_index][joint_index++]);
+    }
+    trajectory->addSuffixWayPoint(state, 0.0);
   }
-
-  // for (std::size_t path_index{ 0 }; path_index < path.size(); ++path_index)
-  // {
-  // }
-
-  // for (std::size_t path_index = 0; path_index < path.size(); ++path_index)
-  // {
-  //   size_t joint_index = 0;
-  //   for (const moveit::core::JointModel* jm : trajectory->getGroup()->getActiveJointModels())
-  //   {
-  //     assert(jm->getVariableCount() == 1);
-  //     state->setVariablePosition(jm->getFirstVariableIndex(), path[path_index][joint_index++]);
-  //   }
-  //   trajectory->addSuffixWayPoint(state, 0.0);
-  // }
+  return trajectory;
 }
 }  // namespace compl_interface

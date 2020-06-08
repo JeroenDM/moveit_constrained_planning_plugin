@@ -12,6 +12,32 @@
 #include <moveit/kinematic_constraints/utils.h>
 #include <moveit_visual_tools/moveit_visual_tools.h>
 
+#include <moveit_msgs/DisplayTrajectory.h>
+#include <moveit_msgs/MotionPlanRequest.h>
+#include <moveit_msgs/MotionPlanResponse.h>
+
+struct Visuals
+{
+public:
+  Visuals(const std::string& reference_frame)
+  {
+    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame);
+    rvt_->loadRobotStatePub("/display_robot_state");
+    rvt_->enableBatchPublishing();
+    rvt_->deleteAllMarkers();
+    rvt_->trigger();
+    ros::Duration(0.1).sleep();
+  }
+  moveit_visual_tools::MoveItVisualToolsPtr rvt_;
+};
+
+class Example
+{
+private:
+  robot_model::RobotModelPtr robot_model_;
+  robot_state::RobotStatePtr robot_state_;
+};
+
 int main(int argc, char** argv)
 {
   const std::string NODE_NAME = "compl_example";  // also used for logging
@@ -24,6 +50,8 @@ int main(int argc, char** argv)
   ros::AsyncSpinner spinner(1);
   spinner.start();
   ros::NodeHandle node_handle("~");
+
+  Visuals Visuals("panda_link0");
 
   robot_model_loader::RobotModelLoaderPtr robot_model_loader(
       new robot_model_loader::RobotModelLoader(ROBOT_DESCRIPTION));
@@ -86,11 +114,11 @@ int main(int argc, char** argv)
   req.goal_constraints.push_back(joint_goal);
 
   auto context = planner_instance->getPlanningContext(planning_scene, req, res.error_code_);
-
+  bool success{ false };
   if (context)
   {
     ROS_INFO_STREAM("Planning context for joint goal created.");
-    auto success = context->solve(res);
+    success = context->solve(res);
     if (res.trajectory_)
     {
       ROS_INFO_STREAM("Path found: " << res.trajectory_);
@@ -101,5 +129,22 @@ int main(int argc, char** argv)
     ROS_INFO_STREAM("Failed to load planning context.");
   }
 
+  ROS_INFO_STREAM(res.trajectory_->getWayPointCount());
+
+  ros::Publisher display_publisher =
+      node_handle.advertise<moveit_msgs::DisplayTrajectory>("/move_group/display_planned_path", 1, true);
+  moveit_msgs::DisplayTrajectory display_trajectory;
+
+  // /* Visualize the trajectory */
+  moveit_msgs::MotionPlanResponse response;
+  res.getMessage(response);
+
+  display_trajectory.trajectory_start = response.trajectory_start;
+  display_trajectory.trajectory.push_back(response.trajectory);
+  Visuals.rvt_->publishTrajectoryLine(display_trajectory.trajectory.back(), joint_model_group);
+  Visuals.rvt_->trigger();
+  display_publisher.publish(display_trajectory);
+
   ros::shutdown();
+  return 0;
 }
