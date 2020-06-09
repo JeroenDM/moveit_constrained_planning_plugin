@@ -35,7 +35,7 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 }
 
 bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_positions,
-                           const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions)
+                           const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions, double allowed_planning_time)
 {
   // problem specific admin
   // Eigen::VectorXd sv(7), gv(7);
@@ -51,7 +51,7 @@ bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_
 
   // solving it
   simple_setup_->setup();
-  ob::PlannerStatus stat = simple_setup_->solve(5.);
+  ob::PlannerStatus stat = simple_setup_->solve(allowed_planning_time);
   if (stat)
   {
     return true;

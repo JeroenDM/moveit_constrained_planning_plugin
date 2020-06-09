@@ -55,7 +55,13 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
 
   compl_interface_->preSolve(robot_model_, "panda_arm", request_);
 
-  auto success = compl_interface_->solve(start_joint_positions, goal_joint_positions);
+  double allowed_planning_time = request_.allowed_planning_time;
+  if (allowed_planning_time == 0.0)
+  {
+    ROS_INFO_STREAM("Settinga allowed planning time to default value of 5 seconds.");
+    allowed_planning_time = 5.0;
+  }
+  auto success = compl_interface_->solve(start_joint_positions, goal_joint_positions, allowed_planning_time);
 
   if (success)
   {

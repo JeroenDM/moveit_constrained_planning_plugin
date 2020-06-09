@@ -154,6 +154,7 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   position_constraint.constraint_region.primitive_poses.push_back(box_pose);
 
   req.path_constraints.position_constraints.push_back(position_constraint);
+  req.allowed_planning_time = 4.0;
   return req;
 }
 

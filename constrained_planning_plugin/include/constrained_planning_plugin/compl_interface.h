@@ -40,13 +40,15 @@ class COMPLInterface
 public:
   COMPLInterface();
 
-  void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group, planning_interface::MotionPlanRequest request);
+  void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                planning_interface::MotionPlanRequest request);
 
   /** directly pass joint positions for start and goal in this minimal example
    *
    * Should this be part of the preSolve setup?
    * */
-  bool solve(const Eigen::Ref<const Eigen::VectorXd>&, const Eigen::Ref<const Eigen::VectorXd>&);
+  bool solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_positions,
+             const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions, double allowed_planning_time);
 
   void postSolve();
 
