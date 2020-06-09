@@ -99,7 +99,6 @@ COMPLPlanningContext::createRobotTrajectoryFromSolution(std::vector<Eigen::Vecto
     for (const moveit::core::JointModel* jm : trajectory->getGroup()->getActiveJointModels())
     {
       assert(jm->getVariableCount() == 1);
-      std::cout << jm->getName() << std::endl;
       state->setVariablePosition(jm->getFirstVariableIndex(), path[path_index][joint_index++]);
     }
     trajectory->addSuffixWayPoint(state, 0.0);
