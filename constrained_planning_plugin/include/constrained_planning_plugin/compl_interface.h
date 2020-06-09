@@ -4,6 +4,7 @@
 #include <memory>
 
 #include <moveit/macros/class_forward.h>
+#include <moveit/planning_interface/planning_request.h>
 
 #include <ompl/base/spaces/RealVectorStateSpace.h>
 #include <ompl/base/Constraint.h>
@@ -39,7 +40,7 @@ class COMPLInterface
 public:
   COMPLInterface();
 
-  void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group);
+  void preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group, planning_interface::MotionPlanRequest request);
 
   /** directly pass joint positions for start and goal in this minimal example
    *

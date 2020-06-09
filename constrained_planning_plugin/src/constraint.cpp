@@ -2,9 +2,17 @@
 
 namespace compl_interface
 {
-COMPLConstraint::COMPLConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group)
-  : robot_model_(robot_model), ob::Constraint(7, 1)
+COMPLConstraint::COMPLConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                                 moveit_msgs::Constraints constraints)
+  : robot_model_(robot_model), dimension_(3), ob::Constraint(7, 3)
 {
+  ROS_INFO_STREAM("--- creating constraints from this input: ---");
+  ROS_INFO_STREAM(constraints);
+  ROS_INFO_STREAM("---------------------------------------------");
+
+  double TOL{ 1e-6 }; /* use a tolerance for equality constraints. */
+  position_bounds_ = { { 0.3 - TOL, 0.3 + TOL }, { -0.3, 0.3 }, { 0.6, 0.7 } };
+
   robot_state_.reset(new robot_state::RobotState(robot_model_));
   robot_state_->setToDefaultValues();
   joint_model_group_ = robot_state_->getJointModelGroup(group);
@@ -23,44 +31,30 @@ Eigen::Isometry3d COMPLConstraint::forwardKinematics(const Eigen::Ref<const Eige
 void COMPLConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
 {
   auto fk = forwardKinematics(x);
-  auto rpy = fk.rotation().eulerAngles(0, 1, 2);
-
-  // y rotation zero
-  // out[0] = rpy[0];
-  // out[0] = 0.0;
-
-  // fixed x_position
-  // 0.3 is the know position of the end-effector
-  // at the start and end of the trajectory
-  // out[0] = fk.translation()[0] - 0.3;
-
-  // try bounds constraints
-  // robot starts with end-effector at 0.6 m and ends
-  // with end-effector at 0.7 m
-  // here we try to stay in between these bounds
-  double z_position = fk.translation()[2];
-  if (z_position > 0.7)
+  for (std::size_t i{ 0 }; i < dimension_; ++i)
   {
-    out[0] = z_position - 0.7;
-  }
-  else if (z_position < 0.6)
-  {
-    out[0] = 0.6 - z_position;
-  }
-  else
-  {
-    out[0] = 0.0;
+    out[i] = position_bounds_[i].distance(fk.translation()[i]);
   }
 }
 
-// void COMPLConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x,
-//                                Eigen::Ref<Eigen::MatrixXd> out) const
-// {
-//   robot_state_->setJointGroupPositions(joint_model_group_, x);
+void COMPLConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const
+{
+  // ASSUME out is filled with zeros by default
+  robot_state_->setJointGroupPositions(joint_model_group_, x);
+  auto fk = forwardKinematics(x);
+  auto J = robot_state_->getJacobian(joint_model_group_);
 
-//   auto J = robot_state_->getJacobian(joint_model_group_);
-//   // out = J.row(3);
-//   out = J.row(0);
-  
-// }
+  for (std::size_t i{ 0 }; i < dimension_; ++i)
+  {
+    double fk_i = fk.translation()[i];
+    if (fk_i > position_bounds_[i].upper)
+    {
+      out.row(i) = J.row(i);
+    }
+    else if (fk_i < position_bounds_[i].lower)
+    {
+      out.row(i) = -J.row(i);
+    }
+  }
+}
 }  // namespace compl_interface

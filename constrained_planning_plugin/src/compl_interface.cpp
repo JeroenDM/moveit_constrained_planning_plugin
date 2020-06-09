@@ -13,7 +13,7 @@ COMPLInterface::COMPLInterface()
 {
 }
 
-void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group)
+void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group, planning_interface::MotionPlanRequest request)
 {
   state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
   ob::RealVectorBounds bounds(7);
@@ -23,7 +23,7 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 
   // constraints should be passed from the planning constext based on what is in the planning request
   // and then through some kind of constrained factory class we can create the appropriate ones.
-  constraints_ = std::make_shared<COMPLConstraint>(robot_model, group);
+  constraints_ = std::make_shared<COMPLConstraint>(robot_model, group, request.path_constraints);
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);
   constrained_state_space_info_ = std::make_shared<ob::ConstrainedSpaceInformation>(constrained_state_space_);
@@ -69,7 +69,7 @@ void COMPLInterface::postSolve()
   auto path = simple_setup_->getSolutionPath();
   path.interpolate();
 
-  path.printAsMatrix(std::cout);
+  // path.printAsMatrix(std::cout);
 
   std::cout << "Writing path from OMPL to generic format." << std::endl;
 

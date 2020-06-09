@@ -59,7 +59,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
   ROS_INFO_STREAM("goal state: " << goal_joint_positions);
 
-  compl_interface_->preSolve(robot_model_, "panda_arm");
+  compl_interface_->preSolve(robot_model_, "panda_arm", request_);
 
   auto success = compl_interface_->solve(start_joint_positions, goal_joint_positions);
 

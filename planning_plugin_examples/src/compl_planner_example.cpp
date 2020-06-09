@@ -20,6 +20,7 @@
 typedef boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> ClassLoaderSPtr;
 
 /** Change this parameters for different robots or planning plugins. */
+const std::string FIXED_FRAME = "panda_link0";
 const std::string PLANNING_GROUP = "panda_arm";
 const std::string ROBOT_DESCRIPTION = "robot_description";
 const std::string BASE_CLASS = "planning_interface::PlannerManager";
@@ -134,6 +135,28 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
   req.goal_constraints.clear();
   req.goal_constraints.push_back(joint_goal);
+
+  // path constraints on end-effector
+  shape_msgs::SolidPrimitive box_constraint;
+  box_constraint.type = shape_msgs::SolidPrimitive::BOX;
+  box_constraint.dimensions = { -1.0, -1.0, 0.1 }; /* use -1 to indicate no constraints. */
+
+  geometry_msgs::Pose box_pose;
+  box_pose.position.z = 0.65;
+  box_pose.orientation.w = 1.0;
+
+  moveit_msgs::PositionConstraint position_constraint;
+  position_constraint.header.frame_id = FIXED_FRAME;
+  position_constraint.link_name = joint_model_group->getLinkModelNames().back(); /* end-effector link */
+  position_constraint.constraint_region.primitives.push_back(box_constraint);
+  position_constraint.constraint_region.primitive_poses.push_back(box_pose);
+
+  req.path_constraints.position_constraints.push_back(position_constraint);
+
+  // ROS_INFO_STREAM("--- constraint ---");
+  // ROS_INFO_STREAM(position_constraint);
+  // ROS_INFO_STREAM("--- ---------- ---");
+
   return req;
 }
 
@@ -200,7 +223,7 @@ int main(int argc, char** argv)
   // ^^^^^^^^^^^^^
 
   // Al ugly book keeping for visuals is hidden inside the `Visuals` class.
-  Visuals Visuals("panda_link0", node_handle);
+  Visuals Visuals(FIXED_FRAME, node_handle);
   Visuals.displaySolution(res, joint_model_group);
 
   // END_TUTORIAL
