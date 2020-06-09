@@ -10,8 +10,15 @@ COMPLConstraint::COMPLConstraint(robot_model::RobotModelConstPtr robot_model, co
   ROS_INFO_STREAM(constraints);
   ROS_INFO_STREAM("---------------------------------------------");
 
-  double TOL{ 1e-6 }; /* use a tolerance for equality constraints. */
-  position_bounds_ = { { 0.3 - TOL, 0.3 + TOL }, { -0.3, 0.3 }, { 0.6, 0.7 } };
+  // hardcoded constraints for debugging:
+  // double TOL{ 1e-6 }; /* use a tolerance for equality constraints. */
+  // position_bounds_ = { { 0.3 - TOL, 0.3 + TOL }, { -0.3, 0.3 }, { 0.6, 0.7 } };
+
+  // get out the position constraints from somewhere deep inside this message.
+  position_bounds_ = positionConstraintMsgToBoundVector(constraints.position_constraints.at(0));
+  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[0]);
+  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[1]);
+  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[2]);
 
   robot_state_.reset(new robot_state::RobotState(robot_model_));
   robot_state_->setToDefaultValues();
@@ -57,4 +64,30 @@ void COMPLConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen
     }
   }
 }
+
+std::vector<Bound> positionConstraintMsgToBoundVector(moveit_msgs::PositionConstraint pos_con)
+{
+  auto pos = pos_con.constraint_region.primitive_poses.at(0).position;
+  auto dims = pos_con.constraint_region.primitives.at(0).dimensions;
+
+  // dimension of -1 signifies no constraints, so set to infinity
+  for (auto& dim : dims)
+  {
+    if (dim == -1)
+      dim = INF;
+  }
+
+  return { { pos.x - dims[0] / 2, pos.x + dims[0] / 2 },
+           { pos.y - dims[1] / 2, pos.y + dims[1] / 2 },
+           { pos.z - dims[2] / 2, pos.z + dims[2] / 2 } };
+}
+
+std::ostream& operator<<(std::ostream& os, const Bound& bound)
+{
+  os << "Bounds: ";
+  os << "( " << bound.lower;
+  os << ", " << bound.upper << " )";
+  return os;
+}
+
 }  // namespace compl_interface

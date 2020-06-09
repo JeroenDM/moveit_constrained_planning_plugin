@@ -139,9 +139,11 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   // path constraints on end-effector
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
-  box_constraint.dimensions = { -1.0, -1.0, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
+  box_pose.position.x = 0.3;
+  box_pose.position.y = 0.0;
   box_pose.position.z = 0.65;
   box_pose.orientation.w = 1.0;
 
@@ -152,11 +154,6 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   position_constraint.constraint_region.primitive_poses.push_back(box_pose);
 
   req.path_constraints.position_constraints.push_back(position_constraint);
-
-  // ROS_INFO_STREAM("--- constraint ---");
-  // ROS_INFO_STREAM(position_constraint);
-  // ROS_INFO_STREAM("--- ---------- ---");
-
   return req;
 }
 
