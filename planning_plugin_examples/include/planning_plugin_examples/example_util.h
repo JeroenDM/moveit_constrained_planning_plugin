@@ -15,12 +15,13 @@ class Visuals
 public:
   Visuals(const std::string& reference_frame, ros::NodeHandle& node_handle)
   {
-    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame, "/rviz_visual_tools");
+    // rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame, "example_visuals");
+    rvt_.reset(new moveit_visual_tools::MoveItVisualTools(reference_frame, "/example_visuals"));
     rvt_->loadRobotStatePub("/display_robot_state");
-    rvt_->enableBatchPublishing();
+    // rvt_->enableBatchPublishing();
+    ros::Duration(0.2).sleep();
     rvt_->deleteAllMarkers();
     rvt_->trigger();
-    ros::Duration(0.1).sleep();
   }
 
   void plotPose(const Eigen::Isometry3d pose)
@@ -30,7 +31,7 @@ public:
   }
 
   moveit_visual_tools::MoveItVisualToolsPtr rvt_;
-  ros::Publisher display_publisher;
+  // ros::Publisher display_publisher;
 };
 
 /** Inverse of the Conversion matrix from roll-pitch-yaw velocity to angular velocity.

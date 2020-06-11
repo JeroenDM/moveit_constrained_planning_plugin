@@ -78,6 +78,7 @@ void tspaceProject(Robot& robot, Visuals& visuals, const Eigen::VectorXd& q_star
 
     // debugging
     robot.plot(visuals.rvt_, q_current);
+    std::cout << "tspace error: " << error.transpose() << std::endl;
     std::cout << "jspace step: " << delta_q.transpose() << std::endl;
     std::cout << "Jacobian: \n";
     std::cout << Ja << std::endl;
@@ -99,22 +100,24 @@ int main(int argc, char** argv)
 
   Eigen::VectorXd q_start(6);
   q_start << 0, -1.5, 1.5, 0, 0, 0;
-  // robot.plot(visuals.rvt_, q_start);
+  robot.plot(visuals.rvt_, q_start);
 
-  auto start_pose = robot.fk(q_start);
-  // visuals.rvt_->publishAxis(start_pose, rvt::LARGE);
-  // visuals.rvt_->trigger();
-  // // visuals.plotPose(start_pose);
-
+  Eigen::Isometry3d start_pose = robot.fk(q_start);
   Eigen::Isometry3d goal_pose = start_pose * Eigen::AngleAxisd(0.3, Eigen::Vector3d::UnitY());
   goal_pose.translation()[1] += 0.1;
+
+  ROS_INFO_STREAM("start pose: " << start_pose.translation().transpose());
+
+  visuals.plotPose(start_pose);
+  ros::Duration(0.1).sleep();
+  visuals.plotPose(goal_pose);
 
   Vector6d error = poseError(start_pose, goal_pose);
   std::cout << error.transpose() << std::endl;
 
   tspaceProject(robot, visuals, q_start, goal_pose);
 
-  // visuals.plotPose(goal_pose);
+ 
 
   // // auto error_pose = goal_pose.inverse() * start_pose;
   // // auto rpy_error = error_pose.rotation().eulerAngles(0, 1, 2);
