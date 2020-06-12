@@ -59,35 +59,65 @@ struct Bound
   }
 };
 
-/** Implementation of OMPL's Constraint class required for planning.
- *
- * This class should be replaced with a factory that can create all types of different constraints
- * dependening on what is in the planning request.
- *
- * For the link name member, I would like it const, but I don't know how to properly initialize it then.
+/** Position constraints serves as a base class for generic constraints for now.
+ * 
+ * Other constraints have to override:
+ * - fillBoundsFromConstraintsMsg
+ * - calcCurrentValues
+ * - calcCurrentJacobian
  * */
-class COMPLConstraint : public ob::Constraint
+class PositionConstraint : public ob::Constraint
 {
 public:
-  COMPLConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
-                  moveit_msgs::Constraints constraints);
+  PositionConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                     moveit_msgs::Constraints constraints, const unsigned int num_dofs);
+
+  void init(moveit_msgs::Constraints constraints);
+
+  // some kind of factory method, but I can't get it to work yet
+  // static std::shared_ptr<PositionConstraint> create(robot_model::RobotModelConstPtr robot_model,
+  //                                                   const std::string& group, moveit_msgs::Constraints constraints,
+  //                                                   const unsigned int num_dofs);
 
   void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
 
   void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
 
-  Eigen::Isometry3d forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_positions) const;
-  Eigen::Quaterniond desired_ee_quat_; /** desired or nominal orientation for the end-effector orientation constraitns.
-                                        */
+  virtual void fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints);
+  virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const;
+  virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const;
+
+  // Are these actually const, as the robot state is modified? How come it works?
+  Eigen::Isometry3d forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
+  Eigen::MatrixXd geometricJacobian(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
+
 private:
+  // MoveIt's robot representation for kinematic calculations
   robot_model::RobotModelConstPtr robot_model_;
   robot_state::RobotStatePtr robot_state_;
   const robot_state::JointModelGroup* joint_model_group_;
-  std::string link_name_;
-  std::vector<Bound> position_bounds_;
-  std::size_t dimension_; /** number of position or rotation values that have constraints. */
+  std::string link_name_; /** Robot link the constraints are applied to. */
 
-  std::vector<Bound> orientation_bounds_;
+protected:
+  std::vector<Bound> bounds_; /** Upper and lower bounds on constrained variables. */
+  Eigen::Vector3d target_;    /** target for equality constraints, nominal value for inequality constraints. */
+};
+
+/** Specialization of Postion constraints to handle orientation error. */
+class RPYConstraints : public PositionConstraint
+{
+public:
+  RPYConstraints(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                 moveit_msgs::Constraints constraints, const unsigned int num_dofs)
+    : PositionConstraint(robot_model, group, constraints, num_dofs)
+  {
+  }
+  virtual void fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints) override;
+  virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+  virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+
+private:
+  Eigen::Quaterniond target_as_quat_;
 };
 
 /** Inverse of the Conversion matrix from roll-pitch-yaw velocity to angular velocity.

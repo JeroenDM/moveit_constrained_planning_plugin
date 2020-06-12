@@ -58,6 +58,8 @@ R_{error} & \rightarrow [\alpha_{error}, \beta_{error}, \gamma_{error}]
 $$
 Now we can apply bounds to these angles as we did for position constraints, using a similar function $d(...)$. But in this case, the bounds are expressed symmetrically around zero error. For example, given and absolute tolerance of $0.4$ radians on $\alpha$, we would add the constraint $-0.2 \lt \alpha_{error} \lt 0.2$. Another constraints could be to have zero error on $\beta$, which is expressed as $-\delta \lt \beta_{error} \lt \delta$. The tolerance value $\delta$ should probably be different for position and orientation.
 
+I could be useful to experiment with other representations. For example, the motion planner TrajOpt uses angle-axis error. If the desired orientation is completely specified, directly using the unit quaternions may be even more suitable.
+
 ### Orientation constraints in MoveIt
 
 The tolerances on the roll pitch yaw angles are specified in an [OrientationConstraint.msg](http://docs.ros.org/melodic/api/moveit_msgs/html/msg/OrientationConstraint.html), again using `-1` to indicate and unconstrained angle.

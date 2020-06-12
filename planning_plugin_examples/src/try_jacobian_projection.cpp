@@ -51,7 +51,7 @@ Vector6d poseError(const Eigen::Isometry3d& current, const Eigen::Isometry3d& ta
 {
   Vector6d error;
   error.head(3) = current.translation() - target.translation();
-  error.tail(3) = poseToRPY(current) - poseToRPY(target);
+  error.tail(3) = poseToRPY(current) - poseToRPY(target); // TODO, wrong !
   return error;
 }
 

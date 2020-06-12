@@ -5,111 +5,148 @@
 
 namespace compl_interface
 {
-COMPLConstraint::COMPLConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
-                                 moveit_msgs::Constraints constraints)
-  : robot_model_(robot_model), dimension_(3), ob::Constraint(7, 3)
+/******************************************
+ * Generic constraint methods
+ * ****************************************/
+
+PositionConstraint::PositionConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                                       moveit_msgs::Constraints constraints, const unsigned int num_dofs)
+  : robot_model_(robot_model), ob::Constraint(num_dofs, 3)
 {
-  ROS_INFO_STREAM("--- creating constraints from this input: ---");
-  ROS_INFO_STREAM(constraints);
-  ROS_INFO_STREAM("---------------------------------------------");
-
-  // hardcoded constraints for debugging:
-  // double TOL{ 1e-6 }; /* use a tolerance for equality constraints. */
-  // position_bounds_ = { { 0.3 - TOL, 0.3 + TOL }, { -0.3, 0.3 }, { 0.6, 0.7 } };
-
-  // get out the position constraints from somewhere deep inside this message.
-  position_bounds_ = positionConstraintMsgToBoundVector(constraints.position_constraints.at(0));
-  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[0]);
-  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[1]);
-  ROS_INFO_STREAM("Parsed constraints" << position_bounds_[2]);
-
+  // Setup Moveit's robot model for kinematic calculations
   robot_state_.reset(new robot_state::RobotState(robot_model_));
   robot_state_->setToDefaultValues();
   joint_model_group_ = robot_state_->getJointModelGroup(group);
 
+  // Parse constraints
+  ROS_INFO_STREAM("Creating position constraints from for shape (" << num_dofs << ", 3)");
+  ROS_INFO_STREAM(constraints.position_constraints.at(0));
+
+  // get out the position constraints from somewhere deep inside this message.
+  // do this in init method to call the virtual method of the a child class.
+  // fillBoundsFromConstraintsMsg(constraints);
+
+  // use end-effector link by default TODO make this input
   link_name_ = joint_model_group_->getLinkModelNames().back();
 
   ROS_INFO_STREAM("Created OMPL constraints for link: " << link_name_);
-
-  // orientation constraints experiments
-  tf::quaternionMsgToEigen(constraints.orientation_constraints.at(0).orientation, desired_ee_quat_);
-  orientation_bounds_ = orientationConstraintMsgToBoundVector(constraints.orientation_constraints.at(0));
-  ROS_INFO_STREAM("Parsed ori constraints" << orientation_bounds_[0]);
-  ROS_INFO_STREAM("Parsed ori constraints" << orientation_bounds_[1]);
-  ROS_INFO_STREAM("Parsed ori constraints" << orientation_bounds_[2]);
 }
 
-Eigen::Isometry3d COMPLConstraint::forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_positions) const
+void PositionConstraint::init(moveit_msgs::Constraints constraints)
 {
-  robot_state_->setJointGroupPositions(joint_model_group_, joint_positions);
+  fillBoundsFromConstraintsMsg(constraints);
+}
+
+Eigen::Isometry3d PositionConstraint::forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const
+{
+  robot_state_->setJointGroupPositions(joint_model_group_, joint_values);
   return robot_state_->getGlobalLinkTransform(link_name_);
 }
 
-void COMPLConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
+Eigen::MatrixXd PositionConstraint::geometricJacobian(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const
 {
-  // auto fk = forwardKinematics(x);
-  // for (std::size_t i{ 0 }; i < dimension_; ++i)
-  // {
-  //   out[i] = position_bounds_[i].distance(fk.translation()[i]);
-  // }
-
-  auto fk = forwardKinematics(x);
-  auto diff = fk.rotation().transpose() * desired_ee_quat_;
-  auto rpy = diff.eulerAngles(0, 1, 2);
-  // out[0] = orientation_bounds_[1].distance(rpy[1]);
-  // // out[0] = rpy[0];
-  // // out[1] = rpy[1];
-  // // out[2] = rpy[2];
-  for (std::size_t i{ 0 }; i < dimension_; ++i)
-  {
-    out[i] = orientation_bounds_[i].distance(rpy[i]);
-  }
-  // std::cout << out[0]  << ", "<< out[1] << ", " << out[2] <<  ", " << std::endl;
+  robot_state_->setJointGroupPositions(joint_model_group_, joint_values);
+  return robot_state_->getJacobian(joint_model_group_);
 }
 
-void COMPLConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const
+void PositionConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
 {
-  // ASSUME out is filled with zeros by default
-  // robot_state_->setJointGroupPositions(joint_model_group_, x);
-  // auto fk = forwardKinematics(x);
-  // auto J = robot_state_->getJacobian(joint_model_group_);
-
-  // for (std::size_t i{ 0 }; i < dimension_; ++i)
-  // {
-  //   double fk_i = fk.translation()[i];
-  //   if (fk_i > position_bounds_[i].upper)
-  //   {
-  //     out.row(i) = J.row(i);
-  //   }
-  //   else if (fk_i < position_bounds_[i].lower)
-  //   {
-  //     out.row(i) = -J.row(i);
-  //   }
-  // }
-
-  robot_state_->setJointGroupPositions(joint_model_group_, x);
-  auto fk = forwardKinematics(x);
-  auto J = robot_state_->getJacobian(joint_model_group_);
-
-  auto diff = fk.rotation().transpose() * desired_ee_quat_;
-  auto rpy = diff.eulerAngles(0, 1, 2);
-
-  auto Ja = angularVelocityToRPYRates(rpy[0], rpy[1]) * J.bottomRows(3);
-  // out = Ja;
-
-   for (std::size_t i{ 0 }; i < dimension_; ++i)
+  auto current_values = calcCurrentValues(x);
+  for (std::size_t i{ 0 }; i < bounds_.size(); ++i)
   {
-    if (rpy[i] > orientation_bounds_[i].upper)
+    out[i] = bounds_[i].distance(current_values[i]);
+  }
+}
+
+void PositionConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const
+{
+  // !! ASSUME out is filled with zeros by default !!
+  auto current_values = calcCurrentValues(x);
+  auto current_jacobian = calcCurrentJacobian(x);
+
+  for (std::size_t i{ 0 }; i < bounds_.size(); ++i)
+  {
+    if (current_values[i] > bounds_[i].upper)
     {
-      out.row(i) = Ja.row(i);
+      out.row(i) = current_jacobian.row(i);
     }
-    else if (rpy[i] < orientation_bounds_[i].lower)
+    else if (current_values[i] < bounds_[i].lower)
     {
-      out.row(i) = -Ja.row(i);
+      out.row(i) = -current_jacobian.row(i);
     }
   }
 }
 
+/******************************************
+ * Position constraints specific
+ * ****************************************/
+
+void PositionConstraint::fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints)
+{
+  bounds_.clear();
+  bounds_ = positionConstraintMsgToBoundVector(constraints.position_constraints.at(0));
+  ROS_INFO_STREAM("Parsed x constraints" << bounds_[0]);
+  ROS_INFO_STREAM("Parsed y constraints" << bounds_[1]);
+  ROS_INFO_STREAM("Parsed z constraints" << bounds_[2]);
+
+  // extract target / nominal value
+  geometry_msgs::Point position =
+      constraints.position_constraints.at(0).constraint_region.primitive_poses.at(0).position;
+  target_ << position.x, position.y, position.z;
+}
+
+Eigen::Vector3d PositionConstraint::calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const
+{
+  return forwardKinematics(x).translation();
+}
+
+Eigen::MatrixXd PositionConstraint::calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const
+{
+  return geometricJacobian(x).topRows(3);
+}
+
+/******************************************
+ * Orientation constraints specific
+ * ****************************************/
+void RPYConstraints::fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints)
+{
+  bounds_.clear();
+  bounds_ = orientationConstraintMsgToBoundVector(constraints.orientation_constraints.at(0));
+  ROS_INFO_STREAM("Parsed rx / roll constraints" << bounds_[0]);
+  ROS_INFO_STREAM("Parsed ry / pitch constraints" << bounds_[1]);
+  ROS_INFO_STREAM("Parsed rz / yaw constraints" << bounds_[2]);
+
+  // extract target / nominal value
+  // for orientation we can save the target in different formats, probably quaternion is the best one here
+  // we could use a 3 vector to be uniform with position constraints, but this makes us vulnerable to
+  // singularities, wich could occur here as the target can be an arbitrary orientation
+  tf::quaternionMsgToEigen(constraints.orientation_constraints.at(0).orientation, target_as_quat_);
+
+  // so we could do this:
+  target_ = target_as_quat_.toRotationMatrix().eulerAngles(0, 1, 2);
+  // but calcCurrentValues and calcCurrentJacobian use target_as_quat_
+}
+
+Eigen::Vector3d RPYConstraints::calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const
+{
+  // I'm not sure yet whether I want the error expressed in the current ee_frame, or target_frame,
+  // or world frame. This implementation expressed the error in the end-effector frame.
+  Eigen::Matrix3d error = forwardKinematics(x).rotation().transpose() * target_as_quat_;
+  return error.eulerAngles(0, 1, 2);
+}
+
+Eigen::MatrixXd RPYConstraints::calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const
+{
+  // use the euler angles of the current end-effector orientation expressed in the world frame
+  // we need this to convert the geometric jacobian to an analytical one that can be used for rpy angles
+  // the jacobian is expressed in the world frame, so should the rpy angles I suppose...
+  auto rpy = forwardKinematics(x).rotation().eulerAngles(0, 1, 2);
+  return angularVelocityToRPYRates(rpy[0], rpy[1]) * geometricJacobian(x).bottomRows(3);
+}
+
+/******************************************
+ * Some utilities
+ * ****************************************/
 Eigen::Matrix3d angularVelocityToRPYRates(double rx, double ry)
 {
   double TOLERANCE{ 1e-9 }; /* TODO what tolerance to use here? */

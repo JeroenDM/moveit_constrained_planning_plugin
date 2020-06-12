@@ -25,7 +25,12 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 
   // constraints should be passed from the planning constext based on what is in the planning request
   // and then through some kind of constrained factory class we can create the appropriate ones.
-  constraints_ = std::make_shared<COMPLConstraint>(robot_model, group, request.path_constraints);
+  // note I don't know how to integrate the line below into the constructor for the constraints
+  // except through a factory class
+  std::size_t num_dofs = robot_model->getJointModelGroup(group)->getVariableCount();
+  constraints_ = std::make_shared<RPYConstraints>(robot_model, group, request.path_constraints, num_dofs);
+  constraints_->init(request.path_constraints);
+  // constraints_ = PositionConstraint::create(robot_model, group, request.path_constraints, num_dofs);
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);
   constrained_state_space_info_ = std::make_shared<ob::ConstrainedSpaceInformation>(constrained_state_space_);
@@ -40,16 +45,17 @@ bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_
                            const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions, double allowed_planning_time)
 {
   // check start and goal state
-  auto rpy_start =
-      (constraints_->forwardKinematics(start_joint_positions).rotation().transpose() * constraints_->desired_ee_quat_)
-          .eulerAngles(0, 1, 2);
-  auto rpy_goal =
-      (constraints_->forwardKinematics(goal_joint_positions).rotation().transpose() * constraints_->desired_ee_quat_)
-          .eulerAngles(0, 1, 2);
+  // auto rpy_start =
+  //     (constraints_->forwardKinematics(start_joint_positions).rotation().transpose() *
+  //     constraints_->desired_ee_quat_)
+  //         .eulerAngles(0, 1, 2);
+  // auto rpy_goal =
+  //     (constraints_->forwardKinematics(goal_joint_positions).rotation().transpose() * constraints_->desired_ee_quat_)
+  //         .eulerAngles(0, 1, 2);
 
-  ROS_INFO_STREAM("Start and goal rpy angles: ");
-  ROS_INFO_STREAM(rpy_start.transpose());
-  ROS_INFO_STREAM(rpy_goal.transpose());
+  // ROS_INFO_STREAM("Start and goal rpy angles: ");
+  // ROS_INFO_STREAM(rpy_start.transpose());
+  // ROS_INFO_STREAM(rpy_goal.transpose());
 
   ob::ScopedState<> start(constrained_state_space_);
   ob::ScopedState<> goal(constrained_state_space_);
