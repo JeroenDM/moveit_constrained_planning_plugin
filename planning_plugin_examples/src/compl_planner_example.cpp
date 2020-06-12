@@ -2,6 +2,9 @@
 #include <pluginlib/class_loader.h>
 #include <boost/scoped_ptr.hpp>
 
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>  // toMsg(...)
+
 #include <moveit/robot_model_loader/robot_model_loader.h>
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/robot_model/robot_model.h>
@@ -34,7 +37,7 @@ class Visuals
 public:
   Visuals(const std::string& reference_frame, ros::NodeHandle& node_handle)
   {
-    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame);
+    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame, "/rviz_visual_tools");
     // rvt_->loadRobotStatePub("/display_robot_state");
     rvt_->enableBatchPublishing();
     rvt_->deleteAllMarkers();
@@ -139,7 +142,8 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   // path constraints on end-effector
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
-  box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
+  // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { -1, -1, 0.1 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
   box_pose.position.x = 0.3;
@@ -153,8 +157,22 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   position_constraint.constraint_region.primitives.push_back(box_constraint);
   position_constraint.constraint_region.primitive_poses.push_back(box_pose);
 
+  // orientation constraints
+  tf2::Quaternion desired_orientation;
+  desired_orientation.setRPY(0, M_PI_2, 0); /** Todo, use intrinsic xyz as in MoveIt's constraitns. */
+
+  moveit_msgs::OrientationConstraint orientation_constraint;
+  orientation_constraint.header.frame_id = FIXED_FRAME;
+  orientation_constraint.link_name = joint_model_group->getLinkModelNames().back(); /* end-effector link */
+  orientation_constraint.orientation = tf2::toMsg(desired_orientation);
+  orientation_constraint.absolute_x_axis_tolerance = -1.0;
+  orientation_constraint.absolute_y_axis_tolerance = 0.5;
+  orientation_constraint.absolute_z_axis_tolerance = -1.0;
+
   req.path_constraints.position_constraints.push_back(position_constraint);
-  req.allowed_planning_time = 4.0;
+  req.path_constraints.orientation_constraints.push_back(orientation_constraint);
+
+  req.allowed_planning_time = 5.0;
   return req;
 }
 
@@ -195,6 +213,18 @@ int main(int argc, char** argv)
   auto req = createPTPProblem(robot_model, joint_model_group);
   planning_interface::MotionPlanResponse res;
 
+  // Visualization
+  // ^^^^^^^^^^^^^
+
+  // All ugly book keeping for visuals is hidden inside the `Visuals` class.
+  Visuals visuals(FIXED_FRAME, node_handle);
+
+  geometry_msgs::Pose nominal_pose_constraints;
+  nominal_pose_constraints.position = req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
+  nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
+  visuals.rvt_->publishAxis(nominal_pose_constraints);
+  visuals.rvt_->trigger();
+
   // Solve the problem
   // ^^^^^^^^^^^^^^^^^
   auto context = planner_instance->getPlanningContext(planning_scene, req, res.error_code_);
@@ -213,18 +243,16 @@ int main(int argc, char** argv)
     ROS_INFO_STREAM("Failed to load planning context.");
   }
 
-  // The path is interpolated by OMPL (taking the constraints into account).
-  // So we should have quite a number of waypoints.
-  ROS_INFO_STREAM(res.trajectory_->getWayPointCount());
+  if (res.trajectory_)
+  {
+    // The path is interpolated by OMPL (taking the constraints into account).
+    // So we should have quite a number of waypoints.
+    ROS_INFO_STREAM(res.trajectory_->getWayPointCount());
 
-  // Visualization
-  // ^^^^^^^^^^^^^
+    visuals.displaySolution(res, joint_model_group);
 
-  // Al ugly book keeping for visuals is hidden inside the `Visuals` class.
-  Visuals Visuals(FIXED_FRAME, node_handle);
-  Visuals.displaySolution(res, joint_model_group);
-
-  // END_TUTORIAL
+    // END_TUTORIAL
+  }
 
   ros::shutdown();
   return 0;

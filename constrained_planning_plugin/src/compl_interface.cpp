@@ -11,9 +11,11 @@ bool isValid(const ob::State* state)
 
 COMPLInterface::COMPLInterface()
 {
+  ompl::msg::setLogLevel(ompl::msg::LOG_DEV2);
 }
 
-void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group, planning_interface::MotionPlanRequest request)
+void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                              planning_interface::MotionPlanRequest request)
 {
   state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
   ob::RealVectorBounds bounds(7);
@@ -37,10 +39,18 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_positions,
                            const Eigen::Ref<const Eigen::VectorXd>& goal_joint_positions, double allowed_planning_time)
 {
-  // problem specific admin
-  // Eigen::VectorXd sv(7), gv(7);
-  // sv << 0, 0, 0, 0, 0, 0, 0;
-  // gv << -1, 0, 0, 0, 0, 0, 0;
+  // check start and goal state
+  auto rpy_start =
+      (constraints_->forwardKinematics(start_joint_positions).rotation().transpose() * constraints_->desired_ee_quat_)
+          .eulerAngles(0, 1, 2);
+  auto rpy_goal =
+      (constraints_->forwardKinematics(goal_joint_positions).rotation().transpose() * constraints_->desired_ee_quat_)
+          .eulerAngles(0, 1, 2);
+
+  ROS_INFO_STREAM("Start and goal rpy angles: ");
+  ROS_INFO_STREAM(rpy_start.transpose());
+  ROS_INFO_STREAM(rpy_goal.transpose());
+
   ob::ScopedState<> start(constrained_state_space_);
   ob::ScopedState<> goal(constrained_state_space_);
   // start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
@@ -78,7 +88,7 @@ void COMPLInterface::postSolve()
   for (auto& state : path.getStates())
   {
     const Eigen::Map<Eigen::VectorXd>& x = *state->as<ob::ConstrainedStateSpace::StateType>();
-    
+
     Eigen::VectorXd joint_position(x);
     solution_path_.push_back(joint_position);
   }

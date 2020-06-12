@@ -4,6 +4,8 @@
 #include <iostream>
 #include <limits>
 
+#include <Eigen/Geometry>
+
 #include <ompl/base/Constraint.h>
 
 #include <moveit/robot_model/robot_model.h>
@@ -16,7 +18,7 @@ namespace compl_interface
 namespace ob = ompl::base;
 
 /** Use Infinity for variables that have no constraints.
- * 
+ *
  * This makes it easier to write generic code.
  * Otherwise we would have to leave out the bounds for specific
  * position or orientation values and writing the constraint
@@ -26,7 +28,7 @@ namespace ob = ompl::base;
 const double INF = std::numeric_limits<double>::infinity();
 
 /** Represents bounds on a scalar value (double).
- * 
+ *
  * Equality constraints can be represented by setting
  * the upper bound and lower bound almost equal.
  * I assume that it is better to not have them exactly equal
@@ -75,7 +77,8 @@ public:
   void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
 
   Eigen::Isometry3d forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_positions) const;
-
+  Eigen::Quaterniond desired_ee_quat_; /** desired or nominal orientation for the end-effector orientation constraitns.
+                                        */
 private:
   robot_model::RobotModelConstPtr robot_model_;
   robot_state::RobotStatePtr robot_state_;
@@ -83,16 +86,36 @@ private:
   std::string link_name_;
   std::vector<Bound> position_bounds_;
   std::size_t dimension_; /** number of position or rotation values that have constraints. */
+
+  std::vector<Bound> orientation_bounds_;
 };
 
+/** Inverse of the Conversion matrix from roll-pitch-yaw velocity to angular velocity.
+ *
+ * w = B(rpy) * rpy_dot
+ * w = angular velocity, B = matrix returned by this function,
+ * rpy = roll-pitch-yaw angles
+ * rpy_dot = roll-pitch-yaw time derivatives.
+ *
+ * This function directly calculates B^-1
+ * and contains a singularity for ry = +/- pi / 2
+ *
+ * from:
+ * https://ethz.ch/content/dam/ethz/special-interest/mavt/robotics-n-intelligent-systems/rsl-dam/documents/RobotDynamics2016/RD2016script.pdf
+ *
+ * */
+Eigen::Matrix3d angularVelocityToRPYRates(double rx, double ry);
+
 /** Extract position constraints from the MoveIt message.
- * 
+ *
  * Assumes there is a single primitive of type box.
  * Only the dimensions and position of this box are used.
  * TODO: also use the link name in future?
  * Now we assume the constraints are for the end-effector link.
  * */
 std::vector<Bound> positionConstraintMsgToBoundVector(moveit_msgs::PositionConstraint pos_con);
+
+std::vector<Bound> orientationConstraintMsgToBoundVector(moveit_msgs::OrientationConstraint ori_con);
 
 /** pretty printing of Bounds **/
 std::ostream& operator<<(std::ostream& os, const Bound& bound);
