@@ -169,7 +169,7 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   orientation_constraint.absolute_y_axis_tolerance = 0.5;
   orientation_constraint.absolute_z_axis_tolerance = -1.0;
 
-  req.path_constraints.position_constraints.push_back(position_constraint);
+  // req.path_constraints.position_constraints.push_back(position_constraint);
   req.path_constraints.orientation_constraints.push_back(orientation_constraint);
 
   req.allowed_planning_time = 5.0;
@@ -220,8 +220,8 @@ int main(int argc, char** argv)
   Visuals visuals(FIXED_FRAME, node_handle);
 
   geometry_msgs::Pose nominal_pose_constraints;
-  nominal_pose_constraints.position = req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
-  nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
+  // nominal_pose_constraints.position = req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
+  // nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
   visuals.rvt_->publishAxis(nominal_pose_constraints);
   visuals.rvt_->trigger();
 

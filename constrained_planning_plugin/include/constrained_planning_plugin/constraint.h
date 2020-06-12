@@ -60,7 +60,7 @@ struct Bound
 };
 
 /** Position constraints serves as a base class for generic constraints for now.
- * 
+ *
  * Other constraints have to override:
  * - fillBoundsFromConstraintsMsg
  * - calcCurrentValues
@@ -119,6 +119,9 @@ public:
 private:
   Eigen::Quaterniond target_as_quat_;
 };
+
+std::shared_ptr<PositionConstraint> createConstraint(robot_model::RobotModelConstPtr robot_model,
+                                                     const std::string& group, moveit_msgs::Constraints constraints);
 
 /** Inverse of the Conversion matrix from roll-pitch-yaw velocity to angular velocity.
  *

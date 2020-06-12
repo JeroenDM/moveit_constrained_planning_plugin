@@ -20,7 +20,6 @@ PositionConstraint::PositionConstraint(robot_model::RobotModelConstPtr robot_mod
 
   // Parse constraints
   ROS_INFO_STREAM("Creating position constraints from for shape (" << num_dofs << ", 3)");
-  ROS_INFO_STREAM(constraints.position_constraints.at(0));
 
   // get out the position constraints from somewhere deep inside this message.
   // do this in init method to call the virtual method of the a child class.
@@ -147,6 +146,46 @@ Eigen::MatrixXd RPYConstraints::calcCurrentJacobian(const Eigen::Ref<const Eigen
 /******************************************
  * Some utilities
  * ****************************************/
+
+std::shared_ptr<PositionConstraint> createConstraint(robot_model::RobotModelConstPtr robot_model,
+                                                     const std::string& group, moveit_msgs::Constraints constraints)
+{
+  std::size_t num_dofs = robot_model->getJointModelGroup(group)->getVariableCount();
+  std::size_t num_pos_con = constraints.position_constraints.size();
+  std::size_t num_ori_con = constraints.orientation_constraints.size();
+
+  if (num_pos_con > 0 && num_ori_con > 0)
+  {
+    ROS_ERROR_STREAM("Combining position and orientation constraints not supported yet.");
+    return nullptr;
+  }
+  else if (num_pos_con > 0)
+  {
+    if (num_pos_con > 1)
+    {
+      ROS_ERROR_STREAM("Only a single position constraints supported. Using the first one.");
+    }
+    auto pos_con = std::make_shared<PositionConstraint>(robot_model, group, constraints, num_dofs);
+    pos_con->init(constraints);
+    return pos_con;
+  }
+  else if (num_ori_con > 0)
+  {
+    if (num_ori_con > 1)
+    {
+      ROS_ERROR_STREAM("Only a single orientation constraints supported. Using the first one.");
+    }
+    auto ori_con = std::make_shared<RPYConstraints>(robot_model, group, constraints, num_dofs);
+    ori_con->init(constraints);
+    return ori_con;
+  }
+  else
+  {
+    ROS_ERROR_STREAM("No constraints found in planning request.");
+    return nullptr;
+  }
+}
+
 Eigen::Matrix3d angularVelocityToRPYRates(double rx, double ry)
 {
   double TOLERANCE{ 1e-9 }; /* TODO what tolerance to use here? */

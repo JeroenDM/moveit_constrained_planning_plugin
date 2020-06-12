@@ -60,7 +60,7 @@ public:
 
 private:
   std::shared_ptr<ob::RealVectorStateSpace> state_space_;
-  std::shared_ptr<RPYConstraints> constraints_;
+  std::shared_ptr<PositionConstraint> constraints_;
 
   std::shared_ptr<ob::ProjectedStateSpace> constrained_state_space_;
   std::shared_ptr<ob::ConstrainedSpaceInformation> constrained_state_space_info_;

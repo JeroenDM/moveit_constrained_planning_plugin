@@ -27,10 +27,18 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
   // and then through some kind of constrained factory class we can create the appropriate ones.
   // note I don't know how to integrate the line below into the constructor for the constraints
   // except through a factory class
-  std::size_t num_dofs = robot_model->getJointModelGroup(group)->getVariableCount();
-  constraints_ = std::make_shared<RPYConstraints>(robot_model, group, request.path_constraints, num_dofs);
-  constraints_->init(request.path_constraints);
+  // std::size_t num_dofs = robot_model->getJointModelGroup(group)->getVariableCount();
+  // constraints_ = std::make_shared<RPYConstraints>(robot_model, group, request.path_constraints, num_dofs);
+  // constraints_->init(request.path_constraints);
   // constraints_ = PositionConstraint::create(robot_model, group, request.path_constraints, num_dofs);
+
+  // a very basic factory method to create constraints:
+  constraints_ = std::static_pointer_cast<PositionConstraint>(createConstraint(robot_model, group, request.path_constraints));
+  if (!constraints_)
+  {
+    ROS_ERROR_STREAM("Failed to create constraints");
+    return;
+  }
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);
   constrained_state_space_info_ = std::make_shared<ob::ConstrainedSpaceInformation>(constrained_state_space_);
