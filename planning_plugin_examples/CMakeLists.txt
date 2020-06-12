@@ -55,3 +55,9 @@ add_executable(try_jacobian_projection  src/try_jacobian_projection.cpp)
 target_link_libraries(try_jacobian_projection
   ${catkin_LIBRARIES}
 )
+
+add_executable(planning_server  src/planning_server.cpp)
+
+target_link_libraries(planning_server
+  ${catkin_LIBRARIES}
+)
