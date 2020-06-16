@@ -28,18 +28,23 @@ public:
     joint_model_group_ = robot_state_->getJointModelGroup(planning_group);
     planning_scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
     planning_scene_->getCurrentStateNonConst().setToDefaultValues();
+
+    // get the end-effector link from the planning group
+    end_effector_link_ = joint_model_group_->getLinkModelNames().back();
+    ROS_INFO_STREAM("Created robot wrapper for planning group: " << planning_group);
+    ROS_INFO_STREAM("with end-effector link: " << end_effector_link_);
   }
 
-  const Eigen::Isometry3d fk(const std::vector<double>& q, const std::string& frame = "tool_tip") const
+  const Eigen::Isometry3d fk(const std::vector<double>& q) const
   {
     robot_state_->setJointGroupPositions(joint_model_group_, q);
-    return robot_state_->getGlobalLinkTransform(frame);
+    return robot_state_->getGlobalLinkTransform(end_effector_link_);
   }
 
-  const Eigen::Isometry3d fk(const Eigen::VectorXd q, const std::string& frame = "tool_tip") const
+  const Eigen::Isometry3d fk(const Eigen::VectorXd q) const
   {
     robot_state_->setJointGroupPositions(joint_model_group_, q);
-    return robot_state_->getGlobalLinkTransform(frame);
+    return robot_state_->getGlobalLinkTransform(end_effector_link_);
   }
 
   Eigen::MatrixXd jacobian(const Eigen::VectorXd q)
@@ -115,6 +120,7 @@ private:
   robot_state::RobotStatePtr robot_state_;
   const robot_state::JointModelGroup* joint_model_group_;
   planning_scene::PlanningScenePtr planning_scene_; /* I should probably use the planning scene monitor */
+  std::string end_effector_link_;
 };
 
 #endif  // CONSTRAINED_PLANNING_EXAMPLE_ROBOT
