@@ -18,7 +18,7 @@
 #include "planning_plugin_examples/example_robot.h"
 
 /** Change this parameters for different robots or planning plugins. */
-/** KUKA KR5 ARC settings **/
+/** KUKA KR5 ARC, ABB irb6640, ... **/
 const std::string FIXED_FRAME = "world";
 const std::string PLANNING_GROUP = "manipulator";
 
