@@ -93,6 +93,12 @@ class Plotter:
         # todo there not realy a quick and easy way to remove the arbitrary 0.5 number
         self.rvt.deleteAllMarkers()
 
+        self.display_publisher = rospy.Publisher(
+            "/move_group/display_planned_path", moveit_msgs.msg.DisplayTrajectory, latch=True, queue_size=1)
+
+        self.robot_state_publisher = rospy.Publisher(
+            "/display_robot_state", moveit_msgs.msg.DisplayRobotState, queue_size=1)
+
         def cleanup_node():
             print("Shutting down node")
             # self.rvt.deleteAllMarkers()
@@ -112,6 +118,16 @@ class Plotter:
 
     def plot_cube(self, pose, dimensions):
         self.rvt.publishCube(pose, 'green', dimensions)
+
+    def plot_robot(self, robot_state):
+        self.robot_state_publisher.publish(
+            moveit_msgs.msg.DisplayRobotState(state=start_state))
+
+    def animate_planning_response(self, res):
+        disp_traj = moveit_msgs.msg.DisplayTrajectory()
+        disp_traj.trajectory_start = res.motion_plan_response.trajectory_start
+        disp_traj.trajectory.append(res.motion_plan_response.trajectory)
+        self.display_publisher.publish(disp_traj)
 
     def delete_all_markers(self):
         self.rvt.deleteAllMarkers()
@@ -186,6 +202,9 @@ def show_problem_in_rviz(problem, rviz_handle):
 
 
 if __name__ == '__main__':
+    ###################################################################
+    # Ros / Rviz / MoveIt setup
+    ###################################################################
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node('execute_planning_example', anonymous=True)
 
@@ -194,20 +213,18 @@ if __name__ == '__main__':
     robot = moveit_commander.RobotCommander()
     group = moveit_commander.MoveGroupCommander(GROUP_NAME)
 
-    display_publisher = rospy.Publisher(
-        "/move_group/display_planned_path", moveit_msgs.msg.DisplayTrajectory, latch=True, queue_size=1)
-
-    robot_state_publisher = rospy.Publisher(
-        "/display_robot_state", moveit_msgs.msg.DisplayRobotState, queue_size=1)
-
+    ###################################################################
+    # Connect to planning server
+    ###################################################################
     rospy.wait_for_service("ompl_constrained_planning", timeout=5.0)
-
     planning_service = rospy.ServiceProxy(
         "ompl_constrained_planning", moveit_msgs.srv.GetMotionPlan)
 
+    ###################################################################
+    # Create problem description
+    ###################################################################
     # problem = create_problem_parameters(group)
     problem = load_hardcoded_problem_parameters()
-    show_problem_in_rviz(problem, rviz)
 
     # create planning request message
     request = moveit_msgs.msg.MotionPlanRequest()
@@ -217,15 +234,21 @@ if __name__ == '__main__':
     start_state.joint_state.position = problem["start"]["joint_values"]
     request.start_state = start_state
 
-    robot_state_publisher.publish(moveit_msgs.msg.DisplayRobotState(state=start_state))
-
     joint_goal = create_joint_goal(
         problem["goal"]["joint_values"], copy.deepcopy(robot.get_current_state()))
     request.goal_constraints.append(joint_goal)
 
     position_constraints = create_position_constraints(
-        [0.9, 0.0, 0.2], [0.01, 0.4, 0.01])
+        [0.9, 0.0, 0.2], [0.05, 0.4, 0.05])
     request.path_constraints.position_constraints.append(position_constraints)
+
+    request.allowed_planning_time = 10.0
+
+    ###################################################################
+    # Visualize problem
+    ###################################################################
+    rviz.plot_robot(start_state)
+    show_problem_in_rviz(problem, rviz)
 
     dims = position_constraints.constraint_region.primitives[0].dimensions
     rviz.plot_cube(
@@ -233,12 +256,9 @@ if __name__ == '__main__':
         Vector3(dims[0], dims[1], dims[2])
     )
 
-    request.allowed_planning_time = 10.0
-
+    ###################################################################
+    # Solve problem and animate solution
+    ###################################################################
     response = planning_service(request)
     print(response)
-
-    disp_traj = moveit_msgs.msg.DisplayTrajectory()
-    disp_traj.trajectory_start = response.motion_plan_response.trajectory_start
-    disp_traj.trajectory.append(response.motion_plan_response.trajectory)
-    display_publisher.publish(disp_traj)
+    rviz.animate_planning_response(response)
