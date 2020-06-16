@@ -23,8 +23,12 @@
 typedef boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> ClassLoaderSPtr;
 
 /** Change this parameters for different robots or planning plugins. */
-const std::string FIXED_FRAME = "panda_link0";
-const std::string PLANNING_GROUP = "panda_arm";
+// const std::string FIXED_FRAME = "panda_link0";
+// const std::string PLANNING_GROUP = "panda_arm";
+
+const std::string FIXED_FRAME = "base_link";
+const std::string PLANNING_GROUP = "manipulator";
+
 const std::string ROBOT_DESCRIPTION = "robot_description";
 const std::string BASE_CLASS = "planning_interface::PlannerManager";
 const std::string PLANNING_PLUGIN = "compl_interface/COMPLPlanner";
@@ -176,6 +180,66 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   return req;
 }
 
+planning_interface::MotionPlanRequest createKukaProblem(robot_model::RobotModelPtr& robot_model,
+                                                        const robot_state::JointModelGroup* joint_model_group)
+{
+  planning_interface::MotionPlanRequest req;
+
+  req.group_name = PLANNING_GROUP;
+
+  // create start
+  robot_state::RobotState start_state(robot_model);
+  std::vector<double> start_joint_values{ 0.24956224988146858, -0.7377165531335406, 2.2006779041601154,
+                                          0.2519340025781682,  -1.4653447987841997, -0.02738102743149895 };
+  start_state.setJointGroupPositions(joint_model_group, start_joint_values);
+  moveit::core::robotStateToRobotStateMsg(start_state, req.start_state);
+
+  // create goal
+  robot_state::RobotState goal_state(robot_model);
+  std::vector<double> goal_joint_values{ -0.2494304937133913, -0.7373711994493184, 2.2005769482037416,
+                                         -0.2500433274782332, -1.4670293064865587, 0.027100177473313725 };
+  goal_state.setJointGroupPositions(joint_model_group, goal_joint_values);
+  moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
+  req.goal_constraints.clear();
+  req.goal_constraints.push_back(joint_goal);
+
+  // path constraints on end-effector
+  shape_msgs::SolidPrimitive box_constraint;
+  box_constraint.type = shape_msgs::SolidPrimitive::BOX;
+  // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 0.1, -1, 0.1 }; /* use -1 to indicate no constraints. */
+
+  geometry_msgs::Pose box_pose;
+  box_pose.position.x = 0.9;
+  box_pose.position.y = 0.0;
+  box_pose.position.z = 0.2;
+  box_pose.orientation.w = 1.0;
+
+  moveit_msgs::PositionConstraint position_constraint;
+  position_constraint.header.frame_id = FIXED_FRAME;
+  position_constraint.link_name = joint_model_group->getLinkModelNames().back(); /* end-effector link */
+  position_constraint.constraint_region.primitives.push_back(box_constraint);
+  position_constraint.constraint_region.primitive_poses.push_back(box_pose);
+
+  // orientation constraints
+  tf2::Quaternion desired_orientation;
+  desired_orientation.setRPY(0, M_PI_2, 0); /** Todo, use intrinsic xyz as in MoveIt's constraitns. */
+
+  moveit_msgs::OrientationConstraint orientation_constraint;
+  orientation_constraint.header.frame_id = FIXED_FRAME;
+  orientation_constraint.link_name = joint_model_group->getLinkModelNames().back(); /* end-effector link */
+  orientation_constraint.orientation = tf2::toMsg(desired_orientation);
+  orientation_constraint.absolute_x_axis_tolerance = -1.0;
+  orientation_constraint.absolute_y_axis_tolerance = 0.5;
+  orientation_constraint.absolute_z_axis_tolerance = -1.0;
+
+  req.path_constraints.position_constraints.push_back(position_constraint);
+  // req.path_constraints.orientation_constraints.push_back(orientation_constraint);
+
+  req.allowed_planning_time = 5.0;
+  return req;
+}
+
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "compl_example");
@@ -210,7 +274,8 @@ int main(int argc, char** argv)
   // Create a motion planning request
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  auto req = createPTPProblem(robot_model, joint_model_group);
+  // auto req = createPTPProblem(robot_model, joint_model_group);
+  auto req = createKukaProblem(robot_model, joint_model_group);
   planning_interface::MotionPlanResponse res;
 
   // Visualization
@@ -220,7 +285,8 @@ int main(int argc, char** argv)
   Visuals visuals(FIXED_FRAME, node_handle);
 
   geometry_msgs::Pose nominal_pose_constraints;
-  // nominal_pose_constraints.position = req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
+  // nominal_pose_constraints.position =
+  // req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
   // nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
   visuals.rvt_->publishAxis(nominal_pose_constraints);
   visuals.rvt_->trigger();
