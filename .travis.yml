@@ -9,7 +9,6 @@ env:
   global:
     - CCACHE_DIR=$HOME/.ccache
     - ROS_REPO=ros
-    - ROSINSTALL_FILENAME=.travis.rosinstall
   matrix:
     - ROS_DISTRO="melodic" UPSTREAM_WORKSPACE=file
 
