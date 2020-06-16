@@ -17,6 +17,7 @@ from tf.transformations import quaternion_from_euler
 
 import rviz_tools_py
 
+FIXED_FRAME = "base_link"
 GROUP_NAME = "manipulator"
 
 
@@ -77,12 +78,29 @@ def create_position_constraints(reference, tolerance):
     return pos_con
 
 
+def create_orientation_constraints(reference, tolerance):
+    """ Create RPY orientation constraints. """
+    ori_con = moveit_msgs.msg.OrientationConstraint()
+    ori_con.header.frame_id = FIXED_FRAME
+
+    quat = quaternion_from_euler(
+        reference[0], reference[1], reference[2], 'rxyz')
+    ori_con.orientation.x = quat[0]
+    ori_con.orientation.y = quat[1]
+    ori_con.orientation.z = quat[2]
+    ori_con.orientation.w = quat[3]
+
+    ori_con.absolute_x_axis_tolerance = tolerance[0]
+    ori_con.absolute_y_axis_tolerance = tolerance[1]
+    ori_con.absolute_z_axis_tolerance = tolerance[2]
+
+    return ori_con
+
+
 class Plotter:
     """
     Wrapper around rviz_tools_py to visualise things.
-    No idea how te remove a specific marker instead of
-    all markers. (to remove opject when it is picked by the robot,
-    but keep pick frame axis visible)
+    It includes a planned path publisher and a robot state publisher.
     """
 
     def __init__(self, topic_name="/visualization_marker", ref_frame="/world", wait_time=None):
@@ -97,7 +115,7 @@ class Plotter:
             "/move_group/display_planned_path", moveit_msgs.msg.DisplayTrajectory, latch=True, queue_size=1)
 
         self.robot_state_publisher = rospy.Publisher(
-            "/display_robot_state", moveit_msgs.msg.DisplayRobotState, queue_size=1)
+            "/display_robot_state", moveit_msgs.msg.DisplayRobotState, latch=True, queue_size=1)
 
         def cleanup_node():
             print("Shutting down node")
@@ -121,13 +139,17 @@ class Plotter:
 
     def plot_robot(self, robot_state):
         self.robot_state_publisher.publish(
-            moveit_msgs.msg.DisplayRobotState(state=start_state))
+            moveit_msgs.msg.DisplayRobotState(state=robot_state))
 
     def animate_planning_response(self, res):
         disp_traj = moveit_msgs.msg.DisplayTrajectory()
         disp_traj.trajectory_start = res.motion_plan_response.trajectory_start
         disp_traj.trajectory.append(res.motion_plan_response.trajectory)
         self.display_publisher.publish(disp_traj)
+
+    def plot_text(self, pose, text, timeout=1.0):
+        scale = Vector3(0.1, 0.1, 0.1)
+        self.rvt.publishText(pose, text, 'black', scale, timeout)
 
     def delete_all_markers(self):
         self.rvt.deleteAllMarkers()
@@ -195,11 +217,6 @@ def load_hardcoded_problem_parameters():
             "goal": {"pose": p_goal, "joint_values": q_goal}}
 
 
-def show_problem_in_rviz(problem, rviz_handle):
-    rviz_handle.plot_axis(problem["start"]["pose"])
-    rviz_handle.plot_axis(problem["goal"]["pose"])
-    # rviz_handle.plot_line(problem["start"]["pose"], problem["goal"]["pose"])
-
 
 if __name__ == '__main__':
     ###################################################################
@@ -208,7 +225,7 @@ if __name__ == '__main__':
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node('execute_planning_example', anonymous=True)
 
-    rviz = Plotter(ref_frame="/base_link")
+    rviz = Plotter(ref_frame=FIXED_FRAME)
 
     robot = moveit_commander.RobotCommander()
     group = moveit_commander.MoveGroupCommander(GROUP_NAME)
@@ -230,35 +247,64 @@ if __name__ == '__main__':
     request = moveit_msgs.msg.MotionPlanRequest()
     request.group_name = GROUP_NAME
 
+    # start and goal
     start_state = copy.deepcopy(robot.get_current_state())
     start_state.joint_state.position = problem["start"]["joint_values"]
     request.start_state = start_state
-
     joint_goal = create_joint_goal(
         problem["goal"]["joint_values"], copy.deepcopy(robot.get_current_state()))
     request.goal_constraints.append(joint_goal)
 
+    # position constraints
     position_constraints = create_position_constraints(
         [0.9, 0.0, 0.2], [0.05, 0.4, 0.05])
     request.path_constraints.position_constraints.append(position_constraints)
+
+    # orientation constraints
+    orientation_constraints = create_orientation_constraints(
+        [0, math.pi / 2, 0], [0.5, -1, -1])
+    # request.path_constraints.orientation_constraints.append(
+    #     orientation_constraints)
 
     request.allowed_planning_time = 10.0
 
     ###################################################################
     # Visualize problem
     ###################################################################
-    rviz.plot_robot(start_state)
-    show_problem_in_rviz(problem, rviz)
+    text_pose = Pose(Point(1, 0, 0), Quaternion(0,0,0,1))
+    pause_time = 2.0
 
+    rviz.plot_text(text_pose, "Position constraints (green cube)", pause_time)
     dims = position_constraints.constraint_region.primitives[0].dimensions
     rviz.plot_cube(
         position_constraints.constraint_region.primitive_poses[0],
         Vector3(dims[0], dims[1], dims[2])
     )
+    rospy.sleep(pause_time)
+
+    rviz.plot_text(text_pose, "Start joint pose", pause_time)
+    rviz.plot_robot(start_state)
+    rospy.sleep(pause_time)
+
+    goal_state = copy.deepcopy(start_state)
+    goal_state.joint_state.position = problem["goal"]["joint_values"]
+    goal_state.is_diff = True
+    rviz.plot_text(text_pose, "Goal joint pose", pause_time)
+    rviz.plot_robot(goal_state)
+    rospy.sleep(pause_time)
+
+    rviz.plot_axis(problem["start"]["pose"])
+    rviz.plot_axis(problem["goal"]["pose"])
+
+    rviz.plot_text(text_pose, "Planning ...", pause_time)
+    
 
     ###################################################################
     # Solve problem and animate solution
     ###################################################################
     response = planning_service(request)
-    print(response)
+    # print(response)
+    rviz.plot_text(text_pose, "Animating solution", pause_time)
+    rviz.animate_planning_response(response)
+    rviz.animate_planning_response(response)
     rviz.animate_planning_response(response)
