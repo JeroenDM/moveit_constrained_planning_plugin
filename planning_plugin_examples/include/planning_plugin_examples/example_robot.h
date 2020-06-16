@@ -64,7 +64,7 @@ public:
     // helper matrix for differentiation.
     Eigen::MatrixXd Ih = h * Eigen::MatrixXd::Identity(ndof, ndof);
 
-    for (std::size_t dim{ 0 }; dim < 6; ++dim)
+    for (std::size_t dim{ 0 }; dim < ndof; ++dim)
     {
       auto rpy = poseToRPY(fk(q));
       auto rpy_plus_h = poseToRPY(fk(q + Ih.col(dim)));
