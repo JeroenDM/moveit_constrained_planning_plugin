@@ -68,6 +68,7 @@ private:
   std::shared_ptr<og::RRTConnect> planner_;
 
   std::vector<Eigen::VectorXd> solution_path_;
+  std::size_t num_dofs_; /* initialized in preSolve method based on robot model. */
 };
 }  // namespace compl_interface
 

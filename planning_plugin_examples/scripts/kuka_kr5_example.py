@@ -9,7 +9,7 @@ import moveit_commander
 import moveit_msgs.msg
 import moveit_msgs.srv
 
-from geometry_msgs.msg import Pose, Point, Quaternion
+from geometry_msgs.msg import Pose, Point, Quaternion, Vector3
 from shape_msgs.msg import SolidPrimitive
 
 
@@ -95,7 +95,7 @@ class Plotter:
 
         def cleanup_node():
             print("Shutting down node")
-            self.rvt.deleteAllMarkers()
+            # self.rvt.deleteAllMarkers()
 
         rospy.on_shutdown(cleanup_node)
 
@@ -109,6 +109,9 @@ class Plotter:
 
     def plot_line(self, start, goal):
         self.rvt.publishLine(start, goal, 'green', 0.05)
+
+    def plot_cube(self, pose, dimensions):
+        self.rvt.publishCube(pose, 'green', dimensions)
 
     def delete_all_markers(self):
         self.rvt.deleteAllMarkers()
@@ -179,7 +182,7 @@ def load_hardcoded_problem_parameters():
 def show_problem_in_rviz(problem, rviz_handle):
     rviz_handle.plot_axis(problem["start"]["pose"])
     rviz_handle.plot_axis(problem["goal"]["pose"])
-    rviz_handle.plot_line(problem["start"]["pose"], problem["goal"]["pose"])
+    # rviz_handle.plot_line(problem["start"]["pose"], problem["goal"]["pose"])
 
 
 if __name__ == '__main__':
@@ -193,6 +196,9 @@ if __name__ == '__main__':
 
     display_publisher = rospy.Publisher(
         "/move_group/display_planned_path", moveit_msgs.msg.DisplayTrajectory, latch=True, queue_size=1)
+
+    robot_state_publisher = rospy.Publisher(
+        "/display_robot_state", moveit_msgs.msg.DisplayRobotState, queue_size=1)
 
     rospy.wait_for_service("ompl_constrained_planning", timeout=5.0)
 
@@ -211,15 +217,23 @@ if __name__ == '__main__':
     start_state.joint_state.position = problem["start"]["joint_values"]
     request.start_state = start_state
 
+    robot_state_publisher.publish(moveit_msgs.msg.DisplayRobotState(state=start_state))
+
     joint_goal = create_joint_goal(
         problem["goal"]["joint_values"], copy.deepcopy(robot.get_current_state()))
     request.goal_constraints.append(joint_goal)
 
     position_constraints = create_position_constraints(
-        [0.9, 0.0, 0.2], [0.1, -1, 0.1])
+        [0.9, 0.0, 0.2], [0.01, 0.4, 0.01])
     request.path_constraints.position_constraints.append(position_constraints)
 
-    request.allowed_planning_time = 5.0
+    dims = position_constraints.constraint_region.primitives[0].dimensions
+    rviz.plot_cube(
+        position_constraints.constraint_region.primitive_poses[0],
+        Vector3(dims[0], dims[1], dims[2])
+    )
+
+    request.allowed_planning_time = 10.0
 
     response = planning_service(request)
     print(response)

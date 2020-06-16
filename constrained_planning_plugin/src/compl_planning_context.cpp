@@ -13,6 +13,7 @@ COMPLPlanningContext::COMPLPlanningContext(const std::string& name, const std::s
   robot_state_.reset(new moveit::core::RobotState(robot_model));
   robot_state_->setToDefaultValues();
   compl_interface_ = COMPLInterfacePtr(new COMPLInterface());
+  num_dofs_ = robot_model->getJointModelGroup(group)->getVariableCount();
 }
 
 void COMPLPlanningContext::clear()
@@ -24,7 +25,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // ROS_INFO_STREAM("Solving a motion planning request.");
   // TODO figure out how to do selection based on request content
   bool use_current_state{ false };
-  Eigen::VectorXd start_joint_positions(7); // TODO
+  Eigen::VectorXd start_joint_positions(num_dofs_);
   if (use_current_state)
   {
     auto start_state = planning_scene_->getCurrentState();
@@ -42,7 +43,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   ROS_INFO_STREAM("Start state: " << start_joint_positions);
 
   // extract goal from planning request
-  Eigen::VectorXd goal_joint_positions(7);  // TODO
+  Eigen::VectorXd goal_joint_positions(num_dofs_);
   ROS_INFO_STREAM("num goal constraints: " << request_.goal_constraints.size());
   std::size_t joint_index{ 0 };
   for (auto& joint_constraint : request_.goal_constraints[0].joint_constraints)

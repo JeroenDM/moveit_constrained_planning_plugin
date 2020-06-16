@@ -32,6 +32,7 @@ public:
 private:
   moveit::core::RobotModelConstPtr robot_model_;
   const moveit::core::JointModelGroup* joint_model_group_;  // Why is this a raw pointer everywhere in MoveIt?
+  std::size_t num_dofs_;
 
   // save a single state to do forward kinematics (not ideal)
   moveit::core::RobotStatePtr robot_state_;

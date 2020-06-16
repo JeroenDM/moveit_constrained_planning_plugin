@@ -23,11 +23,11 @@
 typedef boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> ClassLoaderSPtr;
 
 /** Change this parameters for different robots or planning plugins. */
-const std::string FIXED_FRAME = "panda_link0";
-const std::string PLANNING_GROUP = "panda_arm";
+// const std::string FIXED_FRAME = "panda_link0";
+// const std::string PLANNING_GROUP = "panda_arm";
 
-// const std::string FIXED_FRAME = "base_link";
-// const std::string PLANNING_GROUP = "manipulator";
+const std::string FIXED_FRAME = "base_link";
+const std::string PLANNING_GROUP = "manipulator";
 
 const std::string ROBOT_DESCRIPTION = "robot_description";
 const std::string BASE_CLASS = "planning_interface::PlannerManager";
@@ -147,7 +147,7 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
   // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
-  box_constraint.dimensions = { -1, -1, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 0.1, -1, 0.1 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
   box_pose.position.x = 0.3;

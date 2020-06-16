@@ -11,14 +11,16 @@ bool isValid(const ob::State* state)
 
 COMPLInterface::COMPLInterface()
 {
-  ompl::msg::setLogLevel(ompl::msg::LOG_DEV2);
+  ompl::msg::setLogLevel(ompl::msg::LOG_DEV2);  // TODO nut sure if this is working
 }
 
 void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group,
                               planning_interface::MotionPlanRequest request)
 {
-  state_space_ = std::make_shared<ob::RealVectorStateSpace>(7); // TODO
-  ob::RealVectorBounds bounds(7);
+  num_dofs_ = robot_model->getJointModelGroup(group)->getVariableCount();
+
+  state_space_ = std::make_shared<ob::RealVectorStateSpace>(num_dofs_);
+  ob::RealVectorBounds bounds(num_dofs_);
   bounds.setLow(-2 * M_PI);
   bounds.setHigh(2 * M_PI);
   state_space_->setBounds(bounds);
