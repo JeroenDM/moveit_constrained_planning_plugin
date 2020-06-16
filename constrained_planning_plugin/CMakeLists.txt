@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_msgs
   pluginlib
   roscpp
+  eigen_conversions
 )
 
 find_package(ompl REQUIRED)
@@ -50,3 +51,14 @@ target_link_libraries(
   ${catkin_LIBRARIES}
   ${PROJECT_NAME}
 )
+
+if(CATKIN_ENABLE_TESTING)
+
+  catkin_add_gtest(test_velocity_conversion test/test_velocity_conversion.cpp)
+
+  target_link_libraries(test_velocity_conversion
+    ${PROJECT_NAME}
+    ${catkin_LIBRARIES}
+  )
+
+endif()
