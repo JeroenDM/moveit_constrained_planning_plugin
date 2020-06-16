@@ -72,6 +72,9 @@
   <exec_depend>pluginlib</exec_depend>
   <exec_depend>roscpp</exec_depend>
 
+  <exec_depend>panda_moveit_config</exec_depend>
+  <exec_depend>abb_irb6640_moveit_config</exec_depend>
+
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

@@ -29,10 +29,15 @@ public:
     planning_scene_ = std::make_shared<planning_scene::PlanningScene>(robot_model_);
     planning_scene_->getCurrentStateNonConst().setToDefaultValues();
 
+    // save the number of degrees of freedom of the robot
+    num_dof_ = joint_model_group_->getVariableCount();
+
     // get the end-effector link from the planning group
     end_effector_link_ = joint_model_group_->getLinkModelNames().back();
+
     ROS_INFO_STREAM("Created robot wrapper for planning group: " << planning_group);
     ROS_INFO_STREAM("with end-effector link: " << end_effector_link_);
+    ROS_INFO_STREAM("The robot has " << num_dof_ << " degrees of freedom.");
   }
 
   const Eigen::Isometry3d fk(const std::vector<double>& q) const
@@ -92,6 +97,11 @@ public:
     return J;
   }
 
+  std::size_t getDOF()
+  {
+    return num_dof_;
+  }
+
   void plot(moveit_visual_tools::MoveItVisualToolsPtr mvt, const std::vector<double>& q)
   {
     robot_state_->setJointGroupPositions(joint_model_group_, q);
@@ -121,6 +131,7 @@ private:
   const robot_state::JointModelGroup* joint_model_group_;
   planning_scene::PlanningScenePtr planning_scene_; /* I should probably use the planning scene monitor */
   std::string end_effector_link_;
+  std::size_t num_dof_; /* number of degrees of freedom */
 };
 
 #endif  // CONSTRAINED_PLANNING_EXAMPLE_ROBOT

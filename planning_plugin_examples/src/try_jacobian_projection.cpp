@@ -19,12 +19,12 @@
 
 /** Change this parameters for different robots or planning plugins. */
 /** KUKA KR5 ARC settings **/
-// const std::string FIXED_FRAME = "world";
-// const std::string PLANNING_GROUP = "manipulator";
+const std::string FIXED_FRAME = "world";
+const std::string PLANNING_GROUP = "manipulator";
 
 /** PANDA ARM settings **/
-const std::string FIXED_FRAME = "panda_link0";
-const std::string PLANNING_GROUP = "panda_arm";
+// const std::string FIXED_FRAME = "panda_link0";
+// const std::string PLANNING_GROUP = "panda_arm";
 
 namespace rvt = rviz_visual_tools;
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
@@ -88,10 +88,10 @@ void tspaceProject(Robot& robot, Visuals& visuals, const Eigen::VectorXd& q_star
 
     // debugging
     robot.plot(visuals.rvt_, q_current);
-    std::cout << "tspace error: " << error.transpose() << std::endl;
-    std::cout << "jspace step: " << delta_q.transpose() << std::endl;
-    std::cout << "Jacobian: \n";
-    std::cout << Ja << std::endl;
+    // std::cout << "tspace error: " << error.transpose() << std::endl;
+    // std::cout << "jspace step: " << delta_q.transpose() << std::endl;
+    // std::cout << "Jacobian: \n";
+    // std::cout << Ja << std::endl;
     ros::Duration(0.1).sleep();
   }
 }
@@ -106,28 +106,27 @@ int main(int argc, char** argv)
   Visuals visuals(FIXED_FRAME, node_handle);
   Robot robot(PLANNING_GROUP);
 
+  // compare analytical and numerical Jacobian for random joint values
   compareOrientationJacobians(robot);
 
   // Try simple pseudo-inverse jacobian projection
-  // The code below is written for a 6 dof kuka kr5 robot
-  // Eigen::VectorXd q_start(6);
-  // q_start << 0, -1.5, 1.5, 0, 0, 0;
-  // robot.plot(visuals.rvt_, q_start);
+  Eigen::VectorXd q_start = Eigen::VectorXd::Zero(robot.getDOF());
+  robot.plot(visuals.rvt_, q_start);
 
-  // Eigen::Isometry3d start_pose = robot.fk(q_start);
-  // Eigen::Isometry3d goal_pose = start_pose * Eigen::AngleAxisd(0.3, Eigen::Vector3d::UnitY());
-  // goal_pose.translation()[0] += 0.3;
+  Eigen::Isometry3d start_pose = robot.fk(q_start);
+  Eigen::Isometry3d goal_pose = start_pose * Eigen::AngleAxisd(0.3, Eigen::Vector3d::UnitY());
+  goal_pose.translation()[0] += 0.3;
 
-  // ROS_INFO_STREAM("start pose: " << start_pose.translation().transpose());
+  ROS_INFO_STREAM("start pose: " << start_pose.translation().transpose());
 
-  // visuals.plotPose(start_pose);
-  // ros::Duration(0.1).sleep();
-  // visuals.plotPose(goal_pose);
+  visuals.plotPose(start_pose);
+  ros::Duration(0.1).sleep();
+  visuals.plotPose(goal_pose);
 
-  // Vector6d error = poseError(start_pose, goal_pose);
-  // std::cout << error.transpose() << std::endl;
+  Vector6d error = poseError(start_pose, goal_pose);
+  std::cout << error.transpose() << std::endl;
 
-  // tspaceProject(robot, visuals, q_start, goal_pose);
+  tspaceProject(robot, visuals, q_start, goal_pose);
 
  
 
