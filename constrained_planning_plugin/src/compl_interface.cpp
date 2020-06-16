@@ -17,7 +17,7 @@ COMPLInterface::COMPLInterface()
 void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const std::string& group,
                               planning_interface::MotionPlanRequest request)
 {
-  state_space_ = std::make_shared<ob::RealVectorStateSpace>(7);
+  state_space_ = std::make_shared<ob::RealVectorStateSpace>(7); // TODO
   ob::RealVectorBounds bounds(7);
   bounds.setLow(-2 * M_PI);
   bounds.setHigh(2 * M_PI);
@@ -42,8 +42,11 @@ void COMPLInterface::preSolve(robot_model::RobotModelConstPtr robot_model, const
 
   constrained_state_space_ = std::make_shared<ob::ProjectedStateSpace>(state_space_, constraints_);
   constrained_state_space_info_ = std::make_shared<ob::ConstrainedSpaceInformation>(constrained_state_space_);
+
   simple_setup_ = std::make_shared<og::SimpleSetup>(constrained_state_space_info_);
+
   planner_ = std::make_shared<og::RRTConnect>(constrained_state_space_info_);
+  
   simple_setup_->setPlanner(planner_);
 
   simple_setup_->setStateValidityChecker(isValid);
@@ -69,6 +72,7 @@ bool COMPLInterface::solve(const Eigen::Ref<const Eigen::VectorXd>& start_joint_
   ob::ScopedState<> goal(constrained_state_space_);
   // start->as<ob::ConstrainedStateSpace::StateType>()->copy(sv);
   // goal->as<ob::ConstrainedStateSpace::StateType>()->copy(gv);
+
   start->as<ob::ConstrainedStateSpace::StateType>()->copy(start_joint_positions);
   goal->as<ob::ConstrainedStateSpace::StateType>()->copy(goal_joint_positions);
   simple_setup_->setStartAndGoalStates(start, goal);

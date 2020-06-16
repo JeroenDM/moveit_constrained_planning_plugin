@@ -23,7 +23,7 @@ PositionConstraint::PositionConstraint(robot_model::RobotModelConstPtr robot_mod
 
   // get out the position constraints from somewhere deep inside this message.
   // do this in init method to call the virtual method of the a child class.
-  // fillBoundsFromConstraintsMsg(constraints);
+  // parseConstraintMsg(constraints);
 
   // use end-effector link by default TODO make this input
   link_name_ = joint_model_group_->getLinkModelNames().back();
@@ -33,7 +33,7 @@ PositionConstraint::PositionConstraint(robot_model::RobotModelConstPtr robot_mod
 
 void PositionConstraint::init(moveit_msgs::Constraints constraints)
 {
-  fillBoundsFromConstraintsMsg(constraints);
+  parseConstraintMsg(constraints);
 }
 
 Eigen::Isometry3d PositionConstraint::forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const
@@ -80,7 +80,7 @@ void PositionConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Ei
  * Position constraints specific
  * ****************************************/
 
-void PositionConstraint::fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints)
+void PositionConstraint::parseConstraintMsg(moveit_msgs::Constraints constraints)
 {
   bounds_.clear();
   bounds_ = positionConstraintMsgToBoundVector(constraints.position_constraints.at(0));
@@ -107,7 +107,7 @@ Eigen::MatrixXd PositionConstraint::calcCurrentJacobian(const Eigen::Ref<const E
 /******************************************
  * Orientation constraints specific
  * ****************************************/
-void RPYConstraints::fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints)
+void RPYConstraints::parseConstraintMsg(moveit_msgs::Constraints constraints)
 {
   bounds_.clear();
   bounds_ = orientationConstraintMsgToBoundVector(constraints.orientation_constraints.at(0));

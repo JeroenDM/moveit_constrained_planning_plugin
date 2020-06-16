@@ -24,7 +24,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   // ROS_INFO_STREAM("Solving a motion planning request.");
   // TODO figure out how to do selection based on request content
   bool use_current_state{ false };
-  Eigen::VectorXd start_joint_positions(7);
+  Eigen::VectorXd start_joint_positions(7); // TODO
   if (use_current_state)
   {
     auto start_state = planning_scene_->getCurrentState();
@@ -42,7 +42,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   ROS_INFO_STREAM("Start state: " << start_joint_positions);
 
   // extract goal from planning request
-  Eigen::VectorXd goal_joint_positions(7);
+  Eigen::VectorXd goal_joint_positions(7);  // TODO
   ROS_INFO_STREAM("num goal constraints: " << request_.goal_constraints.size());
   std::size_t joint_index{ 0 };
   for (auto& joint_constraint : request_.goal_constraints[0].joint_constraints)
@@ -53,7 +53,7 @@ bool COMPLPlanningContext::solve(planning_interface::MotionPlanResponse& res)
   }
   ROS_INFO_STREAM("goal state: " << goal_joint_positions);
 
-  compl_interface_->preSolve(robot_model_, "panda_arm", request_);
+  compl_interface_->preSolve(robot_model_, joint_model_group_->getName(), request_);
 
   double allowed_planning_time = request_.allowed_planning_time;
   if (allowed_planning_time == 0.0)

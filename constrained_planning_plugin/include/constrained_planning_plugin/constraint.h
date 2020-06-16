@@ -62,7 +62,7 @@ struct Bound
 /** Position constraints serves as a base class for generic constraints for now.
  *
  * Other constraints have to override:
- * - fillBoundsFromConstraintsMsg
+ * - parseConstraintMsg
  * - calcCurrentValues
  * - calcCurrentJacobian
  * */
@@ -79,17 +79,46 @@ public:
   //                                                   const std::string& group, moveit_msgs::Constraints constraints,
   //                                                   const unsigned int num_dofs);
 
+  /** OMPL's main constraint evaluation function.
+   * 
+   *  OMPL requires you to override at least "function" which represents the constraint F(q) = 0
+   * */
   void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
 
+  /** Optionally you can also provide dF(q)/dq, the Jacobian of  the constriants.
+   * 
+   * */
   void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
 
-  virtual void fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints);
-  virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const;
-  virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const;
-
-  // Are these actually const, as the robot state is modified? How come it works?
+  /** Robot forward kinematics, used to calculate F(q) = 0
+   * 
+   * Are these actually const, as the robot state is modified? How come it works?
+   * */
   Eigen::Isometry3d forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
+
+  /** Robot jacobian as calculated by MoveIt, used to calculate dF(q) / dq
+   * */
   Eigen::MatrixXd geometricJacobian(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
+
+  /** Parse bounds on position and orientation parameters from MoveIt's constraint message.
+   * 
+   * This is non-trivial given the often complex structure of these messages.
+   * */
+  virtual void parseConstraintMsg(moveit_msgs::Constraints constraints);
+
+  /** Calculate the value of the parameter that is being constraint by the bounds.
+   * 
+   * In this Position constraints case, it calculates the x, y and z position
+   * of the end-effector.
+   * */
+  virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const;
+
+  /** Calculate the Jacobian for the current parameters that are being cosntraint.
+   * 
+   * This is the Jacobian without the correction due to the penalty function
+   * (adding a minus sign or setting it to zero.)
+   * */
+  virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const;
 
 private:
   // MoveIt's robot representation for kinematic calculations
@@ -103,7 +132,12 @@ protected:
   Eigen::Vector3d target_;    /** target for equality constraints, nominal value for inequality constraints. */
 };
 
-/** Specialization of Postion constraints to handle orientation error. */
+/** Specialization of Postion constraints to handle orientation error.
+ * 
+ * Constraints on roll, pitch, and yaw angle of the end-effector:
+ * R = Rx(roll) * Ry(pitch) * Rz(yaw)
+ * 
+*/
 class RPYConstraints : public PositionConstraint
 {
 public:
@@ -112,7 +146,7 @@ public:
     : PositionConstraint(robot_model, group, constraints, num_dofs)
   {
   }
-  virtual void fillBoundsFromConstraintsMsg(moveit_msgs::Constraints constraints) override;
+  virtual void parseConstraintMsg(moveit_msgs::Constraints constraints) override;
   virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
   virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
 
