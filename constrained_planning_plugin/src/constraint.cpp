@@ -10,8 +10,9 @@ namespace compl_interface
  * ****************************************/
 
 PositionConstraint::PositionConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
-                                       moveit_msgs::Constraints constraints, const unsigned int num_dofs)
-  : robot_model_(robot_model), ob::Constraint(num_dofs, 3)
+                                       moveit_msgs::Constraints constraints, const unsigned int num_dofs,
+                                       const unsigned int num_cons_)
+  : robot_model_(robot_model), ob::Constraint(num_dofs, num_cons_)
 {
   // Setup Moveit's robot model for kinematic calculations
   robot_state_.reset(new robot_state::RobotState(robot_model_));
@@ -144,6 +145,68 @@ Eigen::MatrixXd RPYConstraints::calcCurrentJacobian(const Eigen::Ref<const Eigen
 }
 
 /******************************************
+ * Quaterion based constraint
+ * ****************************************/
+void QuaternionConstraint::parseConstraintMsg(moveit_msgs::Constraints constraints)
+{
+  bounds_.clear();
+  bounds_ = orientationConstraintMsgToBoundVector(constraints.orientation_constraints.at(0));
+  ROS_INFO_STREAM("Parsing quaterion constraints.");
+  ROS_INFO_STREAM("Parsed rx / roll constraints" << bounds_[0]);
+  ROS_INFO_STREAM("Parsed ry / pitch constraints" << bounds_[1]);
+  ROS_INFO_STREAM("Parsed rz / yaw constraints" << bounds_[2]);
+
+  // extract target / nominal value
+  // for orientation we can save the target in different formats, probably quaternion is the best one here
+  // we could use a 3 vector to be uniform with position constraints, but this makes us vulnerable to
+  // singularities, wich could occur here as the target can be an arbitrary orientation
+  tf::quaternionMsgToEigen(constraints.orientation_constraints.at(0).orientation, target_as_quat_);
+
+  // so we could do this:
+  target_ = target_as_quat_.toRotationMatrix().eulerAngles(0, 1, 2);
+  // but calcCurrentValues and calcCurrentJacobian use target_as_quat_
+}
+
+void QuaternionConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  auto r = forwardKinematics(x).rotation();
+  Eigen::Quaterniond quat(r);
+  // out[0] = 0.0;
+  // out[1] = 0.0;
+  // out[2] = 0.0;
+  // out[3] = 0.0;
+  out[0] = quat.x();
+  out[1] = quat.y() - std::sqrt(2.0) / 2.0;
+  out[2] = quat.z();
+  // out[3] = quat.w() - std::sqrt(2.0) / 2.0;
+}
+
+void QuaternionConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const
+{
+  robot_state_->setJointGroupPositions(joint_model_group_, x);
+  Eigen::MatrixXd J;
+  auto ref_pos = Eigen::Vector3d::Zero();
+  bool s = robot_state_->getJacobian(joint_model_group_, joint_model_group_->getLinkModels().back(), ref_pos, J, true);
+  assert(s);
+  out = J.bottomRows(4).topRows(3);
+  // ob::Constraint::jacobian(x, out);
+}
+
+// Eigen::Vector3d QuaternionConstraint::calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const
+// {
+//   // I'm not sure yet whether I want the error expressed in the current ee_frame, or target_frame,
+//   // or world frame. This implementation expressed the error in the end-effector frame.
+//   Eigen::Matrix3d error = forwardKinematics(x).rotation().transpose() * target_as_quat_;
+//   return error.eulerAngles(0, 1, 2);
+// }
+
+// Eigen::MatrixXd QuaternionConstraint::calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const
+// {
+//   auto rpy = forwardKinematics(x).rotation().eulerAngles(0, 1, 2);
+//   return angularVelocityToRPYRates(rpy[0], rpy[1]) * geometricJacobian(x).bottomRows(3);
+// }
+
+/******************************************
  * Some utilities
  * ****************************************/
 
@@ -175,7 +238,8 @@ std::shared_ptr<PositionConstraint> createConstraint(robot_model::RobotModelCons
     {
       ROS_ERROR_STREAM("Only a single orientation constraints supported. Using the first one.");
     }
-    auto ori_con = std::make_shared<RPYConstraints>(robot_model, group, constraints, num_dofs);
+    // auto ori_con = std::make_shared<RPYConstraints>(robot_model, group, constraints, num_dofs);
+    auto ori_con = std::make_shared<QuaternionConstraint>(robot_model, group, constraints, num_dofs);
     ori_con->init(constraints);
     return ori_con;
   }

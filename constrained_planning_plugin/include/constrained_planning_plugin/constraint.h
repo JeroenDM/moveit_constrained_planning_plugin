@@ -70,7 +70,8 @@ class PositionConstraint : public ob::Constraint
 {
 public:
   PositionConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
-                     moveit_msgs::Constraints constraints, const unsigned int num_dofs);
+                     moveit_msgs::Constraints constraints, const unsigned int num_dofs,
+                     const unsigned int num_cons_ = 3);
 
   void init(moveit_msgs::Constraints constraints);
 
@@ -80,18 +81,18 @@ public:
   //                                                   const unsigned int num_dofs);
 
   /** OMPL's main constraint evaluation function.
-   * 
+   *
    *  OMPL requires you to override at least "function" which represents the constraint F(q) = 0
    * */
   void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
 
   /** Optionally you can also provide dF(q)/dq, the Jacobian of  the constriants.
-   * 
+   *
    * */
   void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
 
   /** Robot forward kinematics, used to calculate F(q) = 0
-   * 
+   *
    * Are these actually const, as the robot state is modified? How come it works?
    * */
   Eigen::Isometry3d forwardKinematics(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
@@ -101,43 +102,41 @@ public:
   Eigen::MatrixXd geometricJacobian(const Eigen::Ref<const Eigen::VectorXd>& joint_values) const;
 
   /** Parse bounds on position and orientation parameters from MoveIt's constraint message.
-   * 
+   *
    * This is non-trivial given the often complex structure of these messages.
    * */
   virtual void parseConstraintMsg(moveit_msgs::Constraints constraints);
 
   /** Calculate the value of the parameter that is being constraint by the bounds.
-   * 
+   *
    * In this Position constraints case, it calculates the x, y and z position
    * of the end-effector.
    * */
   virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const;
 
   /** Calculate the Jacobian for the current parameters that are being cosntraint.
-   * 
+   *
    * This is the Jacobian without the correction due to the penalty function
    * (adding a minus sign or setting it to zero.)
    * */
   virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const;
 
-private:
+protected:
   // MoveIt's robot representation for kinematic calculations
   robot_model::RobotModelConstPtr robot_model_;
   robot_state::RobotStatePtr robot_state_;
   const robot_state::JointModelGroup* joint_model_group_;
-  std::string link_name_; /** Robot link the constraints are applied to. */
-
-protected:
+  std::string link_name_;     /** Robot link the constraints are applied to. */
   std::vector<Bound> bounds_; /** Upper and lower bounds on constrained variables. */
   Eigen::Vector3d target_;    /** target for equality constraints, nominal value for inequality constraints. */
 };
 
 /** Specialization of Postion constraints to handle orientation error.
- * 
+ *
  * Constraints on roll, pitch, and yaw angle of the end-effector:
  * R = Rx(roll) * Ry(pitch) * Rz(yaw)
- * 
-*/
+ *
+ */
 class RPYConstraints : public PositionConstraint
 {
 public:
@@ -149,6 +148,31 @@ public:
   virtual void parseConstraintMsg(moveit_msgs::Constraints constraints) override;
   virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
   virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+
+private:
+  Eigen::Quaterniond target_as_quat_;
+};
+
+/** Specialization of Postion constraints to handle orientation error.
+ *
+ * This constraint assumes a fixed desired orientation specified as a quaternion.
+ *
+ */
+class QuaternionConstraint : public PositionConstraint
+{
+public:
+  QuaternionConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                       moveit_msgs::Constraints constraints, const unsigned int num_dofs)
+    : PositionConstraint(robot_model, group, constraints, num_dofs, 3)
+  {
+  }
+  virtual void parseConstraintMsg(moveit_msgs::Constraints constraints) override;
+
+  void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
+  void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
+
+  // virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+  // virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
 
 private:
   Eigen::Quaterniond target_as_quat_;

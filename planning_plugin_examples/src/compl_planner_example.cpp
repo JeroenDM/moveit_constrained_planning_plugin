@@ -207,7 +207,7 @@ planning_interface::MotionPlanRequest createKukaProblem(robot_model::RobotModelP
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
   // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
-  box_constraint.dimensions = { 0.05, -1, 0.05 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 0.05, 0.4, 0.05 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
   box_pose.position.x = 0.9;
@@ -292,9 +292,6 @@ int main(int argc, char** argv)
   nominal_quat.setRPY(0, M_PI_2, 0);
   nominal_pose_constraints.orientation = tf2::toMsg(nominal_quat);
 
-  // nominal_pose_constraints.position =
-  //     req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
-  // nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
   visuals.rvt_->publishAxis(nominal_pose_constraints);
   visuals.rvt_->publishCuboid(nominal_pose_constraints, 0.05, 0.4, 0.05, rviz_visual_tools::GREEN);
   visuals.rvt_->publishRobotState(req.start_state.joint_state.position, joint_model_group);
