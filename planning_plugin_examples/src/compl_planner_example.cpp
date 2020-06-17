@@ -41,8 +41,8 @@ class Visuals
 public:
   Visuals(const std::string& reference_frame, ros::NodeHandle& node_handle)
   {
-    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame, "/rviz_visual_tools");
-    // rvt_->loadRobotStatePub("/display_robot_state");
+    rvt_ = std::make_shared<moveit_visual_tools::MoveItVisualTools>(reference_frame, "/visualization_marker_array");
+    rvt_->loadRobotStatePub("/display_robot_state");
     rvt_->enableBatchPublishing();
     rvt_->deleteAllMarkers();
     rvt_->trigger();
@@ -207,7 +207,7 @@ planning_interface::MotionPlanRequest createKukaProblem(robot_model::RobotModelP
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
   // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
-  box_constraint.dimensions = { 0.1, -1, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 0.05, -1, 0.05 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
   box_pose.position.x = 0.9;
@@ -274,8 +274,8 @@ int main(int argc, char** argv)
   // Create a motion planning request
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  auto req = createPTPProblem(robot_model, joint_model_group);
-  // auto req = createKukaProblem(robot_model, joint_model_group);
+  // auto req = createPTPProblem(robot_model, joint_model_group);
+  auto req = createKukaProblem(robot_model, joint_model_group);
   planning_interface::MotionPlanResponse res;
 
   // Visualization
@@ -285,10 +285,19 @@ int main(int argc, char** argv)
   Visuals visuals(FIXED_FRAME, node_handle);
 
   geometry_msgs::Pose nominal_pose_constraints;
+  nominal_pose_constraints.position.x = 0.9;
+  nominal_pose_constraints.position.y = 0.0;
+  nominal_pose_constraints.position.z = 0.2;
+  tf2::Quaternion nominal_quat;
+  nominal_quat.setRPY(0, M_PI_2, 0);
+  nominal_pose_constraints.orientation = tf2::toMsg(nominal_quat);
+
   // nominal_pose_constraints.position =
-  // req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
+  //     req.path_constraints.position_constraints[0].constraint_region.primitive_poses[0].position;
   // nominal_pose_constraints.orientation = req.path_constraints.orientation_constraints[0].orientation;
   visuals.rvt_->publishAxis(nominal_pose_constraints);
+  visuals.rvt_->publishCuboid(nominal_pose_constraints, 0.05, 0.4, 0.05, rviz_visual_tools::GREEN);
+  visuals.rvt_->publishRobotState(req.start_state.joint_state.position, joint_model_group);
   visuals.rvt_->trigger();
 
   // Solve the problem
