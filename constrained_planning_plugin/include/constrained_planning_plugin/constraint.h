@@ -178,6 +178,29 @@ private:
   Eigen::Quaterniond target_as_quat_;
 };
 
+/** Angle-axis error
+ *
+ */
+class AAConstraint : public PositionConstraint
+{
+public:
+  AAConstraint(robot_model::RobotModelConstPtr robot_model, const std::string& group,
+                moveit_msgs::Constraints constraints, const unsigned int num_dofs)
+    : PositionConstraint(robot_model, group, constraints, num_dofs)
+  {
+  }
+  virtual void parseConstraintMsg(moveit_msgs::Constraints constraints) override;
+
+  // void function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const override;
+  void jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const override;
+
+  virtual Eigen::Vector3d calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+  // virtual Eigen::MatrixXd calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const override;
+
+private:
+  Eigen::Quaterniond target_as_quat_;
+};
+
 std::shared_ptr<PositionConstraint> createConstraint(robot_model::RobotModelConstPtr robot_model,
                                                      const std::string& group, moveit_msgs::Constraints constraints);
 

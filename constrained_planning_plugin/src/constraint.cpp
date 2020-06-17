@@ -207,6 +207,59 @@ void QuaternionConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, 
 // }
 
 /******************************************
+ * Angle-axis error constraints
+ * ****************************************/
+void AAConstraint::parseConstraintMsg(moveit_msgs::Constraints constraints)
+{
+  bounds_.clear();
+  bounds_ = orientationConstraintMsgToBoundVector(constraints.orientation_constraints.at(0));
+  ROS_INFO_STREAM("Parsing angle-axis constraints");
+  ROS_INFO_STREAM("Parsed rx / roll constraints" << bounds_[0]);
+  ROS_INFO_STREAM("Parsed ry / pitch constraints" << bounds_[1]);
+  ROS_INFO_STREAM("Parsed rz / yaw constraints" << bounds_[2]);
+
+  // extract target / nominal value
+  // for orientation we can save the target in different formats, probably quaternion is the best one here
+  // we could use a 3 vector to be uniform with position constraints, but this makes us vulnerable to
+  // singularities, wich could occur here as the target can be an arbitrary orientation
+  tf::quaternionMsgToEigen(constraints.orientation_constraints.at(0).orientation, target_as_quat_);
+
+  // so we could do this:
+  target_ = target_as_quat_.toRotationMatrix().eulerAngles(0, 1, 2);
+  // but calcCurrentValues and calcCurrentJacobian use target_as_quat_
+}
+
+Eigen::Vector3d AAConstraint::calcCurrentValues(const Eigen::Ref<const Eigen::VectorXd>& x) const
+{
+  // I'm not sure yet whether I want the error expressed in the current ee_frame, or target_frame,
+  // or world frame. This implementation expressed the error in the end-effector frame.
+  Eigen::Matrix3d Rerror = forwardKinematics(x).rotation().transpose() * target_as_quat_;
+  Eigen::AngleAxisd aa(Rerror);
+  double angle = aa.angle();
+  assert(std::abs(angle) < M_PI);
+  return aa.axis() * angle;
+}
+
+// void AAConstraint::function(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::VectorXd> out) const
+// {
+//   out[0] = 0.0;
+//   out[1] = 0.0;
+//   out[2] = 0.0;
+// }
+
+void AAConstraint::jacobian(const Eigen::Ref<const Eigen::VectorXd>& x, Eigen::Ref<Eigen::MatrixXd> out) const
+{
+  ob::Constraint::jacobian(x, out);
+}
+
+// Eigen::MatrixXd AAConstraint::calcCurrentJacobian(const Eigen::Ref<const Eigen::VectorXd>& x) const
+// {
+//   // auto rpy = forwardKinematics(x).rotation().eulerAngles(0, 1, 2);
+//   // return angularVelocityToRPYRates(rpy[0], rpy[1]) * geometricJacobian(x).bottomRows(3);
+//   return ob::Constraint::jacobian(x, out);
+// }
+
+/******************************************
  * Some utilities
  * ****************************************/
 
@@ -239,7 +292,8 @@ std::shared_ptr<PositionConstraint> createConstraint(robot_model::RobotModelCons
       ROS_ERROR_STREAM("Only a single orientation constraints supported. Using the first one.");
     }
     // auto ori_con = std::make_shared<RPYConstraints>(robot_model, group, constraints, num_dofs);
-    auto ori_con = std::make_shared<QuaternionConstraint>(robot_model, group, constraints, num_dofs);
+    // auto ori_con = std::make_shared<QuaternionConstraint>(robot_model, group, constraints, num_dofs);
+    auto ori_con = std::make_shared<AAConstraint>(robot_model, group, constraints, num_dofs);
     ori_con->init(constraints);
     return ori_con;
   }
