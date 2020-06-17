@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: floating_robot_support
+    relative_path: urdf/floating_robot.urdf
+    xacro_args: ""
+  SRDF:
+    relative_path: config/myfirst.srdf
+  CONFIG:
+    author_name: todo
+    author_email: todo@email.com
+    generated_timestamp: 1592388365

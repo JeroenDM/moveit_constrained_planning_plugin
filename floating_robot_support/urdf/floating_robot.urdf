@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<robot name="myfirst">
+<!-- <link name="world" /> -->
+
+<link name="base_link">
+    <visual>
+        <geometry>
+            <cylinder length="0.6" radius="0.2"/>
+        </geometry>
+    </visual>
+</link>
+
+<link name="link1"/>
+<link name="tool0"/>
+
+<joint name="joint1" type="floating">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="base_link"/>
+    <child link="link1"/>
+</joint>
+
+<joint name="link1_to_tool0" type="fixed">
+    <origin xyz="0 0 0.3" rpy="0 0 0"/>
+    <parent link="link1"/>
+    <child link="tool0"/>
+</joint>
+
+</robot>
+
