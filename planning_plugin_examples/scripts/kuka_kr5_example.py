@@ -240,8 +240,8 @@ if __name__ == '__main__':
     ###################################################################
     # Create problem description
     ###################################################################
-    # problem = create_problem_parameters(group)
-    problem = load_hardcoded_problem_parameters()
+    problem = create_problem_parameters(group)
+    # problem = load_hardcoded_problem_parameters()
 
     # create planning request message
     request = moveit_msgs.msg.MotionPlanRequest()

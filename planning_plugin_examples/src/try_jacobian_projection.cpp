@@ -67,7 +67,7 @@ Vector6d poseError(const Eigen::Isometry3d& current, const Eigen::Isometry3d& ta
 
 /** Move a robot from a start joint configuration q_start to an end-effector goal pose.
  * */
-void tspaceProject(Robot& robot, Visuals& visuals, const Eigen::VectorXd& q_start, const Eigen::Isometry3d goal_pose)
+void tspaceProject(Robot& robot, RvizVisuals& visuals, const Eigen::VectorXd& q_start, const Eigen::Isometry3d goal_pose)
 {
   double step_size = 0.05;
   Eigen::VectorXd q_current{ q_start };
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
   spinner.start();
   ros::NodeHandle node_handle("~");
 
-  Visuals visuals(FIXED_FRAME, node_handle);
+  RvizVisuals visuals(FIXED_FRAME, node_handle);
   Robot robot(PLANNING_GROUP);
 
   // compare analytical and numerical Jacobian for random joint values

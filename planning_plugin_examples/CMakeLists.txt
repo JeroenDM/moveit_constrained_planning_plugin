@@ -50,6 +50,12 @@ target_link_libraries(compl_planner_example
   ${catkin_LIBRARIES}
 )
 
+add_executable(panda_example  src/panda_example.cpp)
+
+target_link_libraries(panda_example
+  ${catkin_LIBRARIES}
+)
+
 add_executable(try_jacobian_projection  src/try_jacobian_projection.cpp)
 
 target_link_libraries(try_jacobian_projection
