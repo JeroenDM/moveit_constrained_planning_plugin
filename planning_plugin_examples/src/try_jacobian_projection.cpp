@@ -19,12 +19,12 @@
 
 /** Change this parameters for different robots or planning plugins. */
 /** KUKA KR5 ARC, ABB irb6640, ... **/
-const std::string FIXED_FRAME = "world";
-const std::string PLANNING_GROUP = "manipulator";
+// const std::string FIXED_FRAME = "world";
+// const std::string PLANNING_GROUP = "manipulator";
 
 /** PANDA ARM settings **/
-// const std::string FIXED_FRAME = "panda_link0";
-// const std::string PLANNING_GROUP = "panda_arm";
+const std::string FIXED_FRAME = "panda_link0";
+const std::string PLANNING_GROUP = "panda_arm";
 
 namespace rvt = rviz_visual_tools;
 typedef Eigen::Matrix<double, 6, 1> Vector6d;
@@ -33,21 +33,23 @@ typedef Eigen::Matrix<double, 6, 1> Vector6d;
  * the end-effector's roll pitch yaw velocity
  * and print the error.
  * */
-void compareOrientationJacobians(Robot& robot, const int num_runs = 100)
+void compareOrientationJacobians(Robot& robot, const int num_runs = 5)
 {
   Eigen::VectorXd q_rand;
   for (int i{ 0 }; i < num_runs; ++i)
   {
     q_rand = robot.getRandomJointPositions();
 
-    auto Jexact = robot.jacobianOrientation(q_rand);
-    auto Japprox = robot.numericalJacobianOrientation(q_rand);
+    // auto Jexact = robot.jacobianOrientation(q_rand);
+    auto Jexact = robot.jacobianAngleAxis(q_rand);
+    // auto Japprox = robot.numericalJacobianOrientation(q_rand);
+    auto Japprox = robot.numericalJacobianAngleAxis(q_rand);
     Eigen::MatrixXd Jerror = Japprox - Jexact;
 
-    // std::cout << "--- approx ---\n";
-    // std::cout << Japprox << "\n";
-    // std::cout << "--- exact ---\n";
-    // std::cout << Jexact << std::endl;
+    std::cout << "--- approx ---\n";
+    std::cout << Japprox << "\n";
+    std::cout << "--- exact ---\n";
+    std::cout << Jexact << std::endl;
 
     double sum_error = Jerror.lpNorm<1>();
     std::cout << "error: " << sum_error << std::endl;

@@ -58,6 +58,9 @@ public:
     return robot_state_->getJacobian(joint_model_group_);
   }
 
+  /** Jacobian with rotational part calculated based on
+   * roll, pitch, and yaw angles, using finite differences.
+   * */
   Eigen::MatrixXd numericalJacobianOrientation(const Eigen::VectorXd q)
   {
     const double h{ 1e-6 }; /* step size for numerical derivation */
@@ -79,12 +82,65 @@ public:
     return J;
   }
 
+  /** Jacobian with rotational part calculated based on
+   * Angle-axis representation, using finite differences.
+   * */
+  Eigen::MatrixXd numericalJacobianAngleAxis(const Eigen::VectorXd q)
+  {
+    const double h{ 1e-6 }; /* interval width for numerical derivation */
+    // const std::size_t ndof {q.size()};
+    const std::size_t ndof = q.size();
+
+    Eigen::MatrixXd J = Eigen::MatrixXd::Zero(3, ndof);
+
+    // helper matrix for differentiation.
+    Eigen::MatrixXd Ih = h * Eigen::MatrixXd::Identity(ndof, ndof);
+
+    for (std::size_t dim{ 0 }; dim < ndof; ++dim)
+    {
+      auto aa = poseToAA(fk(q));
+      auto aa_plus_h = poseToAA(fk(q + Ih.col(dim)));
+      Eigen::Vector3d col = (aa_plus_h - aa) / h;
+      J.col(dim) = col;
+    }
+    return J;
+  }
+
   Eigen::MatrixXd jacobianOrientation(const Eigen::VectorXd q)
   {
     // const std::size_t ndof {q.size()};
     const std::size_t ndof = q.size();
     auto rpy = poseToRPY(fk(q));
     return angularVelocityToRPYRates(rpy[0], rpy[1]) * jacobian(q).bottomRows(3);
+  }
+
+  /** TODO look in Modern Robotics, page 161.
+   * 
+   * There is still an issue in the formula,
+   * I think it could be that the formula is for transforming
+   * the jacobian expressed in the end-effector frame, not the one in the world frame.
+   * 
+   * **/
+  Eigen::MatrixXd jacobianAngleAxis(const Eigen::VectorXd q)
+  {
+    // const std::size_t ndof {q.size()};
+    const std::size_t ndof = q.size();
+    Eigen::Matrix3d R_ee = fk(q).rotation();
+    Eigen::AngleAxisd aa(R_ee);
+
+    // create short variable for readability of complex expression
+    double t{ std::abs(aa.angle()) };
+    Eigen::Vector3d r{ aa.axis() * sign(aa.angle()) };
+    Eigen::Matrix3d r_skew;
+    r_skew << 0, -r[2], r[1], r[2], 0, -r[0], -r[1], r[0], 0;
+
+    double A, B;
+    A = (1 - std::cos(t)) / (t * t);
+    B = (t - std::sin(t)) / (t * t * t);
+
+    auto m_convert = Eigen::Matrix3d::Identity() - A * r_skew + B * r_skew * r_skew;
+
+    return m_convert.inverse() * jacobian(q).bottomRows(3);
   }
 
   Eigen::MatrixXd analyticalJacobian(const Eigen::VectorXd q)

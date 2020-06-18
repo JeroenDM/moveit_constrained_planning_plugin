@@ -134,6 +134,21 @@ Eigen::Vector3d poseToRPY(const Eigen::Isometry3d& p)
   return rotationToRPY(p.rotation());
 }
 
+Eigen::Vector3d poseToAA(const Eigen::Isometry3d& p)
+{
+  // TODO check the angle? see trajopt
+  // https://github.com/ros-industrial-consortium/trajopt_ros/blob/a393abb99b221c97603ae40fcbd0f172f94a7fcc/trajopt/include/trajopt/utils.hpp#L161
+  Eigen::AngleAxisd aa(p.rotation());
+  return aa.axis() * aa.angle();
+}
+
+/** Get the sign of a number.
+ * https://stackoverflow.com/questions/1903954/is-there-a-standard-sign-function-signum-sgn-in-c-c
+ * */
+template <typename T> int sign(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 /** Pendantic loading of the planning plugin
  *
  * Really usefull for debugging configuration issues.
