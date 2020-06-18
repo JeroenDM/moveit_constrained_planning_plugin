@@ -23,16 +23,17 @@
 typedef boost::scoped_ptr<pluginlib::ClassLoader<planning_interface::PlannerManager>> ClassLoaderSPtr;
 
 /** Change this parameters for different robots or planning plugins. */
-const std::string FIXED_FRAME = "panda_link0";
-const std::string PLANNING_GROUP = "panda_arm";
+// const std::string FIXED_FRAME = "panda_link0";
+// const std::string PLANNING_GROUP = "panda_arm";
 
-// const std::string FIXED_FRAME = "base_link";
-// const std::string PLANNING_GROUP = "manipulator";
+const std::string FIXED_FRAME = "base_link";
+const std::string PLANNING_GROUP = "manipulator";
 
 const std::string ROBOT_DESCRIPTION = "robot_description";
 const std::string BASE_CLASS = "planning_interface::PlannerManager";
 // const std::string PLANNING_PLUGIN = "compl_interface/COMPLPlanner";
-const std::string PLANNING_PLUGIN = "ompl_interface/OMPLPlanner";
+// const std::string PLANNING_PLUGIN = "ompl_interface/OMPLPlanner";
+const std::string PLANNING_PLUGIN = "elion/ElionPlanner";
 
 /** Everyting that has to do with visualization in Rviz
  * is grouped in this class.
@@ -174,8 +175,8 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   orientation_constraint.absolute_y_axis_tolerance = 0.1;
   orientation_constraint.absolute_z_axis_tolerance = -1.0;
 
-  // req.path_constraints.position_constraints.push_back(position_constraint);
-  req.path_constraints.orientation_constraints.push_back(orientation_constraint);
+  req.path_constraints.position_constraints.push_back(position_constraint);
+  // req.path_constraints.orientation_constraints.push_back(orientation_constraint);
 
   req.allowed_planning_time = 5.0;
   return req;
@@ -236,6 +237,9 @@ planning_interface::MotionPlanRequest createKukaProblem(robot_model::RobotModelP
 
   // req.path_constraints.position_constraints.push_back(position_constraint);
   req.path_constraints.orientation_constraints.push_back(orientation_constraint);
+  // Ugly hack to specify how the orientation error should be handled
+  // req.path_constraints.name = "AngleAxisOrientation";
+  req.path_constraints.name = "RPY";
 
   req.allowed_planning_time = 10.0;
   return req;
@@ -275,8 +279,8 @@ int main(int argc, char** argv)
   // Create a motion planning request
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  auto req = createPTPProblem(robot_model, joint_model_group);
-  // auto req = createKukaProblem(robot_model, joint_model_group);
+  // auto req = createPTPProblem(robot_model, joint_model_group);
+  auto req = createKukaProblem(robot_model, joint_model_group);
   planning_interface::MotionPlanResponse res;
 
   // Visualization
