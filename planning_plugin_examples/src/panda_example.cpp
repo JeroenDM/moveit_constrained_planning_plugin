@@ -49,19 +49,29 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   req.group_name = PLANNING_GROUP;
 
   // create start
+  Eigen::Isometry3d start_pose =
+      Eigen::Translation3d(0.3, -0.3, 0.6) * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
   robot_state::RobotState start_state(robot_model);
   std::vector<double> start_joint_values{ 0.666988104319289,   -0.9954030434136065, -1.1194235704518019,
                                           -1.9946073045682555, -2.772101772642487,  3.4631937276027194,
                                           -1.2160652080175647 };
-  start_state.setJointGroupPositions(joint_model_group, start_joint_values);
+  // start_state.setJointGroupPositions(joint_model_group, start_joint_values);
+
+  bool success = start_state.setFromIK(joint_model_group, start_pose);
+  ROS_INFO_STREAM("Start pose IK: " << (success ? "succeeded." : "failed."));
+
   moveit::core::robotStateToRobotStateMsg(start_state, req.start_state);
 
   // create goal
+  Eigen::Isometry3d goal_pose =
+      Eigen::Translation3d(0.3, 0.3, 0.7) * Eigen::AngleAxisd(M_PI / 2, Eigen::Vector3d::UnitY());
   robot_state::RobotState goal_state(robot_model);
   std::vector<double> goal_joint_values{ 1.7301680303369467, -0.7342165592762893, -0.5358506493073328,
                                          -2.214051132383283, -1.9148221683474542, 1.8324940020482856,
                                          -1.588014538557859 };
-  goal_state.setJointGroupPositions(joint_model_group, goal_joint_values);
+  // goal_state.setJointGroupPositions(joint_model_group, goal_joint_values);
+  goal_state.setFromIK(joint_model_group, goal_pose);
+  ROS_INFO_STREAM("Goal pose IK: " << (success ? "succeeded." : "failed."));
   moveit_msgs::Constraints joint_goal = kinematic_constraints::constructGoalConstraints(goal_state, joint_model_group);
   req.goal_constraints.clear();
   req.goal_constraints.push_back(joint_goal);
@@ -70,7 +80,7 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   shape_msgs::SolidPrimitive box_constraint;
   box_constraint.type = shape_msgs::SolidPrimitive::BOX;
   // box_constraint.dimensions = { 1e-6, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
-  box_constraint.dimensions = { 0.01, -1.0, 0.1 }; /* use -1 to indicate no constraints. */
+  box_constraint.dimensions = { 0.01, 0.6, 0.1 }; /* use -1 to indicate no constraints. */
 
   geometry_msgs::Pose box_pose;
   box_pose.position.x = 0.3;
@@ -97,7 +107,7 @@ planning_interface::MotionPlanRequest createPTPProblem(robot_model::RobotModelPt
   orientation_constraint.absolute_z_axis_tolerance = -1.0;
 
   req.path_constraints.position_constraints.push_back(position_constraint);
-//   req.path_constraints.orientation_constraints.push_back(orientation_constraint);
+  //   req.path_constraints.orientation_constraints.push_back(orientation_constraint);
 
   req.allowed_planning_time = 5.0;
   return req;
@@ -162,8 +172,8 @@ int main(int argc, char** argv)
 
   //   visuals.rvt_->publishAxis(nominal_pose_constraints);
   //   visuals.rvt_->publishCuboid(nominal_pose_constraints, 0.05, 0.4, 0.05, rviz_visual_tools::GREEN);
-    visuals.rvt_->publishRobotState(req.start_state.joint_state.position, joint_model_group);
-    visuals.rvt_->trigger();
+  visuals.rvt_->publishRobotState(req.start_state.joint_state.position, joint_model_group);
+  visuals.rvt_->trigger();
 
   // Solve the problem
   // ^^^^^^^^^^^^^^^^^
