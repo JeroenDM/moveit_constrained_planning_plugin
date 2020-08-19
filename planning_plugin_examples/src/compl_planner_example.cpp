@@ -31,9 +31,9 @@ const std::string PLANNING_GROUP = "manipulator";
 
 const std::string ROBOT_DESCRIPTION = "robot_description";
 const std::string BASE_CLASS = "planning_interface::PlannerManager";
-// const std::string PLANNING_PLUGIN = "compl_interface/COMPLPlanner";
+const std::string PLANNING_PLUGIN = "compl_interface/COMPLPlanner";
 // const std::string PLANNING_PLUGIN = "ompl_interface/OMPLPlanner";
-const std::string PLANNING_PLUGIN = "elion/ElionPlanner";
+// const std::string PLANNING_PLUGIN = "elion/ElionPlanner";
 
 /** Everyting that has to do with visualization in Rviz
  * is grouped in this class.
