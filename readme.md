@@ -1,3 +1,7 @@
+
+:warning: This repository was an early precursor to [elion](https://github.com/JeroenDM/elion), and I don't recommend using this repository.
+The final implementation will hopefully be merged into MoveIt, see [this pull request](https://github.com/ros-planning/moveit/pull/2273).
+
 # Constrained planning plugin for MoveIt, using OMPL
 
 This repository is supposed to become an MVP to validate that we can use the constrained planning stuff in OMPL through a simple interface.
